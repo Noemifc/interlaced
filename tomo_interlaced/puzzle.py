@@ -65,7 +65,7 @@ pulses = angles_to_pulses_epics(angles)
 radii = r_outer - loop_indices * r_step
 
 # ------------------------
-# PLOT
+# PLOT : visualizza e stampa in plot polare  e stampa angoli, plot e pulses
 # ------------------------
 fig = plt.figure(figsize=(7,7))
 ax = fig.add_subplot(111, polar=True)
