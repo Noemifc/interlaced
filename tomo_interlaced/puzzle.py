@@ -12,10 +12,9 @@ r_step = 0.15   # passo radiale tra i loop (per plot)
 # ----------------------------------------------------
 # EPICS PVs
 # ----------------------------------------------------
-pso_counts_pv = PV('PSOCountsPerRotation')      # numero di impulsi per giro
-pv_start_taxi = PV("2bmb:TomoScan:PSOStartTaxi") # inizio taxi
-pv_end_taxi   = PV("2bmb:TomoScan:PSOEndTaxi")   # fine taxi
-pv_counts     = PV("2bmb:TomoScan:PSOCountsPerRotation")
+pv_start_taxi = PV("2bmb:TomoScan:PSOStartTaxi")         # Posizione di inizio taxi [deg]
+pv_end_taxi   = PV("2bmb:TomoScan:PSOEndTaxi")           # Posizione di fine taxi [deg]
+pv_counts     = PV("2bmb:TomoScan:PSOCountsPerRotation") # Numero di impulsi per giro del PSO
 
 # Lettura dai PV
 start_taxi     = pv_start_taxi.get()           # es: -0.749939 deg
@@ -29,10 +28,11 @@ def bit_reverse(x, bits):
     """Inverte i bit di x su 'bits' bit"""
     b = f'{x:0{bits}b}'
     return int(b[::-1], 2)
+
 # ----------------------------------------------------
 # TIMBIR
 # ----------------------------------------------------
-angles = []
+angles_timbir = []
 loop_indices = []
 bits = int(np.log2(K))
 
@@ -45,35 +45,54 @@ for n in range(N_theta):
     theta = val * 360.0 / N_theta       # angolo 0-360°
     theta = theta % 180.0               # 0-180° per tomografia
 
-    angles.append(theta)
+    angles_timbir.append(theta)
     loop_indices.append(loop)
 
-angles = np.array(angles)
+angles_timbir = np.array(angles_timbir)
 loop_indices = np.array(loop_indices)
 
 # ----------------------------------------------------
-# FUNZIONE TAXI CORRECTION : correggo prima cosi' tengo conto degli angoli giusti da inviare al pso
+# FUNZIONE TAXI CORRECTION
 # ----------------------------------------------------
 def taxi_correct(angles_deg, start_taxi, end_taxi, counts_per_rev):
     """
-    Corregge gli angoli per  taxi 
-    e poi converte gli angoli corretti in impulsi PSO.
+    Corregge gli angoli TIMBIR considerando l'inizio taxi
+    e la fine taxi, e li converte in impulsi PSO.
+    
+    Parametri:
+        angles_deg      : array degli angoli TIMBIR [deg]
+        start_taxi      : angolo di inizio taxi [deg]
+        end_taxi        : angolo di fine taxi [deg]
+        counts_per_rev  : impulsi per giro del PSO
+
+    Ritorna:
+        pulses_corrected      : array impulsi corretti per il PSO
+        pulses_end_corrected  : impulso corrispondente alla fine taxi
+        theta_corrected       : angoli TIMBIR corretti per start taxi
+        theta_end_corrected   : angolo finale corretto per end taxi
     """
     pulse_per_deg = counts_per_rev / 360.0
 
-    # Correzione start taxi: shift angolare
-    theta_corrected = angles_deg + abs(start_taxi)
-    pulses_corrected = theta_corrected * pulse_per_deg
+    theta_corrected = []
+    pulses_corrected = []
 
-    # Correzione fine taxi
+    # correzione start taxi: shift angolare
+    for theta in angles_deg:
+        theta_corr = theta + abs(start_taxi)
+        theta_corrected.append(theta_corr)
+        pulses_corrected.append(theta_corr * pulse_per_deg)
+
+    # correzione fine taxi
     theta_end_corrected = 180.0 + end_taxi
     pulses_end_corrected = theta_end_corrected * pulse_per_deg
 
-    return pulses_corrected.astype(int), int(pulses_end_corrected), theta_corrected, theta_end_corrected
+    return np.array(pulses_corrected, dtype=int), int(pulses_end_corrected), theta_corrected, theta_end_corrected
 
+# ----------------------------------------------------
 # Applico la correzione taxi
+# ----------------------------------------------------
 pulses_corrected, pulses_end_corrected, theta_corrected, theta_end_corrected = taxi_correct(
-    angles, start_taxi, end_taxi, counts_per_rev
+    angles_timbir, start_taxi, end_taxi, counts_per_rev
 )
 
 # ----------------------------------------------------
