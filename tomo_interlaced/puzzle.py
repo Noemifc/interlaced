@@ -52,7 +52,7 @@ angles_timbir = np.array(angles_timbir)
 loop_indices = np.array(loop_indices)
 
 # ----------------------------------------------------
-# FUNZIONE TAXI CORRECTION
+# FUNZIONE TAXI CORRECTION con theta_corrected angoli di timbir corretti 
 # ----------------------------------------------------
 def taxi_correct(angles_deg, start_taxi, end_taxi, counts_per_rev):
     """
@@ -96,37 +96,34 @@ pulses_corrected, pulses_end_corrected, theta_corrected, theta_end_corrected = t
 )
 
 # ----------------------------------------------------
-# FUNZIONE CONVERSIONE GENERICA ANGOLI → IMPULSI (EPICS)
+# FUNZIONE DI CONVERSIONE ANGOLI CORRETTI -> IMPULSI PSO : converte solo in impulsi, mantenendo la correzione del taxi già applicata
 # ----------------------------------------------------
-def angles_to_pulses_epics(angles_deg):
+def angles_corrected_to_pulses_epics(theta_corrected):
     """
-    Converte angoli in gradi in impulsi PSO leggendo PSOCountsPerRotation dal PV.
+    Converte un array di angoli TIMBIR corretti per il taxi (in gradi)
+    in impulsi PSO leggendo PSOCountsPerRotation dal PV EPICS.
+
+    Parametri:
+        theta_corrected : array/lista di angoli TIMBIR corretti [deg]
+
+    Ritorna:
+        pulses : array di impulsi PSO interi
     """
-    counts_per_rev = float(pso_counts_pv.get())
-    pulses = angles_deg * (counts_per_rev / 360.0)
+    # Lettura numero di impulsi per giro dal PV
+    counts_per_rev = float(pv_counts.get())
+
+    # Assicuro che sia array NumPy
+    theta_corrected = np.array(theta_corrected)
+
+    # Conversione angoli -> impulsi
+    pulses = theta_corrected * (counts_per_rev / 360.0)
+
+    # Arrotondo e converto in interi
     return np.round(pulses).astype(int)
 
-# Esempio: conversione angoli TIMBIR senza taxi
-pulses_epics = angles_to_pulses_epics(angles)
-
 # ----------------------------------------------------
-# PLOT POLARE TIMBIR
-# ----------------------------------------------------
-radii = r_outer - loop_indices * r_step  # raggio per ogni loop
 
-fig = plt.figure(figsize=(7,7))
-ax = fig.add_subplot(111, polar=True)
-ax.set_title(f"TIMBIR Interlaced Acquisition (N={N_theta} - K={K})\nOgni loop su un cerchio separato", va='bottom', fontsize=13)
 
-# Plot angoli con correzione taxi (deg → rad)
-ax.plot(theta_corrected*np.pi/180, radii, '-o', lw=1.2, ms=5, alpha=0.8, color='tab:blue')
-
-# Annotazione numero loop
-for i in range(N_theta):
-    ax.text(theta_corrected[i]*np.pi/180, radii[i]+0.03, str(loop_indices[i]+1), ha='center', va='bottom', fontsize=8)
-
-ax.set_rticks([])
-plt.show()
 
 # ----------------------------------------------------
 # PROFILO MOTORE E CALCOLO TRIGGER
