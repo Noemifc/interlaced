@@ -29,7 +29,7 @@ start_taxi     = pv_start_taxi.get()      # es: -0.749939
 end_taxi       = pv_end_taxi.get()        # es: 180.735 -> ma tu usi solo l'extra (0.735)
 counts_per_rev = pv_counts.get()          # es: 1.18402e7 (vero per 2-BM-B)
 
-# array angoli ideali (interlaced o quello che vuoi)
+# array angoli ideali  o altro
 angles_deg = [0, 0.1, 0.2]
 
 def taxi_correct(angles_deg, start_taxi, end_taxi, counts_per_rev):
