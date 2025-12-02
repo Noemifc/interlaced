@@ -1,9 +1,25 @@
+"""
+
+PVs rotary :
+maximum speed  2bmb:m102.VMAX
+speed  2bmb:m102.VELO
+base speed  2bmb:m102.Vbas
+Accel 2bmb:m102.ACCL
+
+motor resolution 
+motor resolution   2bmb:m102.MRES
+encoder resolution  2bmb:m102.ERES
+read back resolution  2bmb:m102.RRES
+
+"""
+
+
 import numpy as np
 from epics import PV
 
-# ----------------------------------------------------
+# ------------------------------------------------------------------------------------------------------------------------------------------------------
 # TIMBIR e nuovi PVs 
-# ----------------------------------------------------
+# ------------------------------------------------------------------------------------------------------------------------------------------------------
 
 pv_N_theta = PV("2bmb:TomoScan:NTheta")          # numero totale proiezioni  NUOVO PV
 pv_K       = PV("2bmb:TomoScan:KLoops")         # numero di loop interlacciati  NUOVO PV
@@ -53,9 +69,9 @@ for n in range(N_theta):
 angles_timbir = np.array(angles_timbir)
 loop_indices = np.array(loop_indices)
 
-# ----------------------------------------------------
+# ------------------------------------------------------------------------------------------------------------------------------------------------------
 # FUNZIONE TAXI CORRECTION con theta_corrected angoli di timbir corretti 
-# ----------------------------------------------------
+# ------------------------------------------------------------------------------------------------------------------------------------------------------
 def taxi_correct(angles_deg, start_taxi, end_taxi, counts_per_rev):
     """
     Corregge gli angoli TIMBIR considerando l'inizio taxi
@@ -98,54 +114,92 @@ pulses_corrected, pulses_end_corrected, theta_corrected, theta_end_corrected = t
     angles_timbir, start_taxi, end_taxi, counts_per_rev
 )
 
-# ----------------------------------------------------
+# ------------------------------------------------------------------------------------------------------------------------------------------------------
 # Restituisce gli impulsi reali 
-# ----------------------------------------------------
-import numpy as np
-
-def compute_real_timeline(theta_corrected, omega_target, accel, counts_per_rev):
+# ------------------------------------------------------------------------------------------------------------------------------------------------------
+def compute_real_timeline(theta_corrected, counts_per_rev):
     """
-    Restituisce gli impulsi reali simulando la rampa del PSO
-    θ is in degrees
-    theta_correct = angoli TIMBIR corretti per start taxi
-    omega_target = velocita' angolare del rotary stage [deg/s] (= cost che il motore raggiunge dopo la fase di accelerazione)
-    counts_per_rev = numero di impulsi del PSO per giro completo: quanti impulsi genera il motore per fare 360°
-
-    Durante la rampa la v cresce da 0 a omega_target usando la   θ = 1/2 * a t^2  →  t = sqrt(2θ/a)
-    """
-   # pv_omega_target = PV("2bmb:TomoScan:rotarystageplateau") 
-   # omega_target     = pv_omega_target.get() 
+    Restituisce gli impulsi reali simulando la rampa del PSO.
     
-    theta_corrected = np.array(theta_corrected)
-    omega_target = 500 * 6  # gradi/sec
+    theta_corrected = angoli TIMBIR corretti per start-taxi [degrees]
+    counts_per_rev  = impulsi encoder per giro (PSO) → es. 532800 per 2-BM
+    Tutte le velocità sono in °/sec, lette dai PV del rotary stage.
 
-    # Calcola tempo necessario per accelerare 
-    t_acc = omega_target / accel
-    theta_acc = 0.5 * accel * t_acc**2
+    Durante la rampa la velocità cresce da Vbas → Vmax usando:
+    θ(t) = 1/2 * a * t^2   →   t = sqrt(2θ / a)
+    """
+
+    # ------------------------------
+    # IMPORT EPICS PV
+    # ------------------------------
+    from epics import PV
+    import numpy as np
+
+    # ==============================
+    #  LETTURA PV DEL ROTARY STAGE
+    # ==============================
+
+    # PV velocità massima (plateau)
+    pv_vmax = PV("2bmb:m102.VMAX")         # [deg/sec]
+    omega_target = pv_vmax.get()           # velocità di plateau
+
+    # PV velocità base velocità di start-rampa
+    pv_vbas = PV("2bmb:m102.VBAS")         # [deg/sec]
+    omega_base = pv_vbas.get()
+
+    # PV accel (tempo per passare da vbass → vmax)
+    pv_accel = PV("2bmb:m102.ACCL")        # [sec]
+    accel_time = pv_accel.get()
+
+    # accelerazione lineare [deg/sec^2]
+    accel = (omega_target - omega_base) / accel_time
+
+    # PVs risoluzioni 
+    pv_mres = PV("2bmb:m102.MRES")         # motor resolution
+    motor_res = pv_mres.get()
+
+    pv_eres = PV("2bmb:m102.ERES")         # encoder resolution
+    enc_res = pv_eres.get()
+
+    pv_rres = PV("2bmb:m102.RRES")         # readback resolution
+    rb_res = pv_rres.get()
+
+    # Converti angoli in array numpy
+    theta_corrected = np.array(theta_corrected, dtype=float)
+
+    # ==============================
+    # CALCOLI DI RIFERIMENTO
+    # ==============================
+
+    # θ_acc = angolo percorso durante la rampa:
+    # θ_acc = 1/2 * a * t_acc^2   con t_acc = ACCL (tempo ramp definito dal PV)
+    theta_acc = 0.5 * accel * accel_time**2
 
     pulses_per_deg = counts_per_rev / 360.0
 
     real_pulses = []
 
+    # ==============================
+    # LOOP SUGLI ANGOLI
+    # ==============================
     for theta in theta_corrected:
 
-        # Caso 1: angolo cade dentro la rampa di accelerazione
+        # Caso 1 – θ cade nella rampa di accelerazione
         if theta <= theta_acc:
-            # θ = ½ a t^2  →  t = sqrt(2θ/a)
+            # t = sqrt(2θ/a)
             t = np.sqrt(2 * theta / accel)
 
-        # Caso 2: angolo cade in regime costante
+        # Caso 2 – θ cade nella fase a velocità costante
         else:
             t_const = (theta - theta_acc) / omega_target
-            t = t_acc + t_const
+            t = accel_time + t_const
 
-        # Il PSO genera impulsi a frequenza istantanea
-        # In regime costante: pulses = θ * pulses_per_deg
-        # In rampa: devi convertirlo come θ(t)
+        # impulsi generati:
         pulses = theta * pulses_per_deg
         real_pulses.append(int(np.round(pulses)))
 
     return np.array(real_pulses)
+
 
 
 
