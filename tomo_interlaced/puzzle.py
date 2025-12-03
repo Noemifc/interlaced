@@ -83,7 +83,7 @@ counts_per_rev = pv_counts.get()               # es: 11_840_200 impulsi/giro imp
 
 def taxi_correct(angles_deg, start_taxi, end_taxi, counts_per_rev):
    
-    pulse_per_deg = counts_per_rev / 360.0  # conversione in impulsi
+    pulse_per_deg = counts_per_rev / 360.0  # conversione in impulsi i
 
     theta_corrected = []
     pulses_corrected = []
@@ -107,9 +107,13 @@ pulses_corrected, pulses_end_corrected, theta_corrected, theta_end_corrected = t
     angles_timbir, start_taxi, end_taxi, counts_per_rev
 )
 
-# ----------------------------------------------------
-# Generazione ritardi Δpulses per memPulseSeq
-# ----------------------------------------------------
+# ------------------------------------------------------------------------------------------------------------------------------------------------------
+# Generazione ritardi Δpulses per memPulseSeq 
+# ------------------------------------------------------------------------------------------------------------------------------------------------------
+"""  rotazione continua PSO conta impulsi in ingresso, ogni volta che parte un trigger,
+il contatore si resetta al nuovo valore N quindi deve sapere solo di quanto aumentare N per andare dal trigger A al trigger B
+ 
+"""
 def compute_deltas(pulses_corrected):
     pulses_corrected = np.array(pulses_corrected, dtype=int)
 
@@ -123,17 +127,9 @@ def compute_deltas(pulses_corrected):
 
     return np.array(deltas, dtype=int)
 
-# ------------------------------------
 # applico agli impulsi
-# ------------------------------------
-
+# delta_end = pulses_end_corrected - pulses_corrected[-1] # solo se richiesto 
 delta_pulses = compute_deltas(pulses_corrected)
-
-
-
-
-
-
 
 # ------------------------------------------------------------------------------------------------------------------------------------------------------
 # Restituisce gli impulsi reali 
@@ -162,13 +158,11 @@ Converte angoli corretti TIMBIR in impulsi usando le risoluzioni reali
     """
 def compute_real_timeline(theta_corrected, counts_per_rev):
     """
-    Restituisce gli impulsi reali simulando la rampa completa
-    del rotary stage: accelerazione → plateau → decelerazione.
+Legge i parametri reali del motore (velocità, accelerazione, risoluzioni…)
+Divide la rotazione in tre fasi: accelerazione – plateau – decelerazione
+Calcola quanti impulsi PSO x tempo/angolo del trigger
     
-    theta_corrected : angoli TIMBIR corretti per start-taxi [deg]
-    counts_per_rev  : impulsi encoder per giro (PSO)
-    
-    Tutte le velocità sono in °/sec, lette dai PV del rotary stage.
+    Tutte le velocità sono in °/sec, lette dai PV del rotary stage
     """
 
     # ------------------------------
@@ -204,7 +198,7 @@ def compute_real_timeline(theta_corrected, counts_per_rev):
     # ------------------------------
     # Accelerazione uniforme da VBAS -> VELO
     a_acc = ACCL
-    theta_accel = (VELO**2 - VBAS**2) / (2 * a_acc)  # angolo percorso in accelerazione
+    theta_accel = (VELO**2 - VBAS**2) / (2 * a_acc)  # angolo percorso in accelerazione da VBAS a VELO
 
     # Decelerazione uniforme: simmetrica accelerazione
     a_dec = a_acc
@@ -214,7 +208,7 @@ def compute_real_timeline(theta_corrected, counts_per_rev):
     theta_plateau = 180.0 - theta_accel - theta_decel  # angolo percorso a VELO costante
 
     # ------------------------------
-    # Loop su tutti gli angoli corretti
+    # Loop su tutti gli angoli corretti : valuto ogni angolo dove si trova
     # ------------------------------
     for theta in theta_corrected:
 
@@ -222,7 +216,7 @@ def compute_real_timeline(theta_corrected, counts_per_rev):
         # 1) Fase accelerazione
         # -----------------------------------------------
         if theta <= theta_accel:
-            # moto uniformemente accelerato
+            # moto uni accelerato
             t = (np.sqrt(VBAS**2 + 2*a_acc*theta) - VBAS) / a_acc
             pulses = theta * pulse_per_deg
             pulses_timeline.append(int(pulses))
