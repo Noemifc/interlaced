@@ -26,7 +26,7 @@ K       = int(pv_K.get()) or 4          # numero di loop interlacciati
 # BIT-REVERSAL
 # ----------------------------------------------------
 def bit_reverse(x, bits):
-    """Inverte i bit di x su 'bits' bit"""
+  
     b = f'{x:0{bits}b}'
     return int(b[::-1], 2)
 # ----------------------------------------------------
@@ -34,7 +34,7 @@ def bit_reverse(x, bits):
 # ----------------------------------------------------
 angles_timbir = []
 loop_indices = []
-bits = int(np.log2(K))
+bits = int(np.log2(K)) 
 
 for n in range(N_theta):
     base = n * K
@@ -50,22 +50,10 @@ for n in range(N_theta):
 
 angles_timbir = np.array(angles_timbir)
 loop_indices = np.array(loop_indices)
-# ------------------------------------------------------------------------------------------------------------------------------------------------------
-# FUNZIONE TAXI CORRECTION con theta_corrected angoli di timbir corretti 
-# ------------------------------------------------------------------------------------------------------------------------------------------------------
- """
-    Applica la correzione taxi (taxi_correct) per spostare gli angoli secondo inizio/fine taxi
-    Sposta ogni angolo TIMBIR per il taxi iniziale
-    
-    Parametri:
-        angles_deg      : array degli angoli TIMBIR [deg]
 
-    Ritorna:
-        pulses_corrected      : array impulsi corretti per il PSO
-        pulses_end_corrected  : impulso corrispondente alla fine taxi
-        theta_corrected       : angoli TIMBIR corretti per start taxi
-        theta_end_corrected   : angolo finale corretto per end taxi
-    """
+print("Angles TIMBIR (degrees):")
+print(np.round(angles_timbir, 4))
+ 
 
 # ----------------------------------------------------
 # EPICS PVs per Taxi e PSO
@@ -79,7 +67,30 @@ start_taxi     = pv_start_taxi.get()           # es: -0.749939 deg angolo di ini
 end_taxi       = pv_end_taxi.get()             # es: 0.735 deg angolo di fine taxi 
 counts_per_rev = pv_counts.get()               # es: 11_840_200 impulsi/giro impulsi per giro del PSO
 
+# ------------------------------------------------------------------------------------------------------------------------------------------------------
+# CONVERSIONE DA ANGOLI AD IMPULSI
+# ------------------------------------------------------------------------------------------------------------------------------------------------------
 
+ """
+    Converte angoli TIMBIR in impulsi per il motore.
+    
+    angles_timbir : array/list di angoli in gradi
+    counts_per_rev : numero di impulsi per giro completo del motore
+    """
+def deg_to_pulse(angles_timbir, counts_per_rev):
+    pulse_per_deg = counts_per_rev / 360.0  
+    pulse_timbir = np.round(np.array(angles_timbir) * pulse_per_deg, 0).astype(int)
+    return pulse_timbir
+
+
+pulses = deg_to_pulse(angles_timbir, counts_per_rev)
+
+print("Pulses TIMBIR:")
+print(pulses)
+
+# ------------------------------------------------------------------------------------------------------------------------------------------------------
+# FUNZIONE TAXI CORRECTION con theta_corrected angoli di timbir corretti 
+# ------------------------------------------------------------------------------------------------------------------------------------------------------
 
 def taxi_correct(angles_deg, start_taxi, end_taxi, counts_per_rev):
    
