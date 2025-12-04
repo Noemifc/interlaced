@@ -8,31 +8,46 @@ angles_eq = generate_angles(N_theta=32, method='equally_spaced')
 
 # Golden
 angles_golden = generate_angles(N_theta=32, method='golden')
-
-
-
 '''
 
+# --------------------------------------------------------------------
+# Interlaced  GOLDEN
+# --------------------------------------------------------------------
+def generate_golden_interlaced_angles():
+    # ----------------------------------------------------
+    # Lettura PV
+    # ----------------------------------------------------
+    pv_N_theta = PV("2bmb:TomoScan:NTheta")
+    pv_K       = PV("2bmb:TomoScan:KLoops")
 
+    N_theta = int(pv_N_theta.get() or 32)  # default 32 se PV non risponde
+    K       = int(pv_K.get() or 4)         # default 4 se PV non risponde
 
+    # --------------------------------------------------------------------
+    # Parametri
+    # --------------------------------------------------------------------
+    end_angle = 360.
+    golden_a = end_angle * (3 - np.sqrt(5)) / 2  # ≈ 111.246°
+    num_proj = N_theta  # numero di proiezioni per loop
 
+    theta_start = np.linspace(0, end_angle, K, endpoint=False)  # offset interlacciamento equispaziato
+
+    # --------------------------------------------------------------------
+    # Genero angoli 
+    # --------------------------------------------------------------------
+    golden_angles_tomo = np.mod(
+        theta_start[:, None] + np.arange(num_proj) * golden_a,
+        end_angle
+    ).flatten()
+
+    golden_angles_interl = np.unique(np.sort(golden_angles_tomo))  # rimozione duplicati
+    return golden_angles_interl
 
 
 # --------------------------------------------------------------------
 # Interlaced  TIMBIR
 # --------------------------------------------------------------------
-
-def generate_timbir_angles():
-    """
-    Genera gli angoli secondo schema TIMBIR con bit-reversal,
-    leggendo i PV di tomoscan:
-        - 2bmb:TomoScan:NTheta   (numero totale proiezioni)
-        - 2bmb:TomoScan:KLoops   (numero loop interlacciati)
-    Ritorna:
-        angles  -> array numpy float, angoli interlacciati in radianti
-        angles_deg -> in gradi
-        loops   -> array degli indici di loop
-    """
+def generate_timbir_interlaced_angles():
 
     # ----------------------------------------------------
     # Lettura PV
@@ -80,6 +95,6 @@ def generate_timbir_angles():
 # ESEMPIO USO
 # --------------------------------------------------------------------
 if __name__ == "__main__":
-    ang_rad, ang_deg, loops = generate_timbir_angles()
+    ang_rad, ang_deg, loops = generate_timbir_interlaced_angles()  # CORRETTO: chiamare la funzione definita
     print("TIMBIR in gradi:")
     print(np.round(ang_deg, 4))
