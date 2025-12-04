@@ -94,7 +94,7 @@ print(pulses)
 
 def taxi_correct(angles_deg, start_taxi, end_taxi, counts_per_rev):
    
-    pulse_per_deg = counts_per_rev / 360.0  # conversione in impulsi i
+    pulse_per_deg = counts_per_rev / 360.0  #fattore di conversione
 
     theta_corrected = []
     pulses_corrected = []
