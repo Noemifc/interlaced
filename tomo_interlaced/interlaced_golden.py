@@ -1,6 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from epics import PV  # Assumendo tu stia usando pyepics
+from epics import PV   
 
 # --- PVs ---
 pv_N_theta = PV("2bmb:TomoScan:NTheta")
@@ -14,7 +14,7 @@ end_angle = 360.
 golden_a = end_angle * (3 - np.sqrt(5)) / 2  # ≈ 111.246°
 num_proj = N_theta  # numero di proiezioni per loop
 
-# --- offset iniziali per interlacciamento (puoi cambiarli a piacere) ---
+# --- offset iniziali per interlacciamento  ---
 theta_start = np.linspace(0, end_angle, K, endpoint=False)  # interlacciamento equispaziato
 
 # --- generazione angoli golden interlacciati ---
