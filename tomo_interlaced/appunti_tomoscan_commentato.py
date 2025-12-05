@@ -1,4 +1,47 @@
 
+
+encoder_multiply =   pv_counts     = PV("2bmb:TomoScan:PSOCountsPerRotation") # Numero di impulsi per giro del PSO
+raw_delta_encoder_counts = pulse_per_deg = counts_per_rev / 360.0  
+
+
+
+delta_encoder_counts =   pulse_timbir
+
+passo in gradi × counts_per_degree = passo in encoder counts
+'''
+
+   # Compute the actual delta to keep each interval an integer number of encoder counts
+encoder_multiply = float(self.epics_pvs['PSOCountsPerRotation'].get()) / 360.       #single count           # pulse_per_deg  quanti impulsi corrispondono a un grado , cioè quanti encoder counts corrispondono a un grado di rotazione
+raw_delta_encoder_counts = self.rotation_step * encoder_multiply                              # quanti impulsi dovrebbe fare l’encoder per quel passo (rotation_step =rotation_step = passo angolare in gradi)
+delta_encoder_counts = round(raw_delta_encoder_counts)          #rounding       pulse_timbir                    # arrotonda all’impulso intero più vicino
+
+
+# che cosa si intende per rotation step perche arrotonda 
+# sara' una nuova routine o si andra' a riconnettee a questa
+# ----------------------------------------------------
+self.epics_pvs['PSOEncoderCountsPerStep'].put(delta_encoder_counts)  # ogni step di rotazione vale X counts 
+# Change the rotation step Python variable and PV
+self.rotation_step = delta_encoder_counts / encoder_multiply #trasformo counts in angolo reale per vedere a quanti gradi reali corrispondono nel reale 
+self.epics_pvs['RotationStep'].put(self.rotation_step)  # passo in gradi mandato ad episcs che viene utilizzato 
+
+#---------- Se ho capito -------------------------------------------------------------------------------------------------------------
+
+encoder_multiply = float(self.epics_pvs['PSOCountsPerRotation'].get()) / 360.   #prende single count
+raw_delta_encoder_counts = self.angles_timbir * encoder_multiply                # converti in impulsi relate all angoloideale fornito  
+delta_encoder_counts = round(raw_delta_encoder_counts)                          # arrotonda rispetto all' impulso piu' vicino 
+
+# riporta ad Epics 
+
+self.epics_pvs['PSOEncoderCountsPerStep'].put(delta_encoder_counts)  # ogni step di rotazione vale X counts 
+self.angles_timbir = delta_encoder_counts / encoder_multiply         # perche riprende qui di nuovo rotation steps aka angles_timbir
+
+
+# FPGA import self.epics_pvs['RotationStep'].put(self.angles_timbir)  # passo in gradi mandato ad episcs che viene utilizzato 
+
+
+
+
+
 # --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # TOMOSCAN FUNCTION : compute_positions_PSO
 # ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -39,20 +82,25 @@ motor_speed = gradi/sec necessari per coprire rotation_step in time_per_angle.  
         self.motor_speed = np.abs(self.rotation_step) / time_per_angle
 
 
-'''  Legge il tempo di accelerazione impostato (RotationAccelTime) Calcola la distanza di accelerazione (accel_dist) usando formula fisica semplificata:   s=1/2 vt 
+'''  Legge il tempo di accelerazione impostato RotationAccelTime e calcola la distanza di accelerazione (accel_dist) usando  s=1/2 vt 
 serve a sapere quanto spazio serve per arrivare alla velocità costante '''
         # Get the distance needed for acceleration = 1/2 a t^2 = 1/2 * v * t
-        motor_accl_time = float(self.epics_pvs['RotationAccelTime'].get()) # Acceleration time in s    ACC
+        motor_accl_time = float(self.epics_pvs['RotationAccelTime'].get()) # Acceleration time in s    as pv ACC
         accel_dist = motor_accl_time / 2.0 * float(self.motor_speed) 
 
 ''' Determina il nuovo punto di partenza della scansione (rotation_start_new):
 Se senso positivo → punto di partenza normale.
 Altrimenti → regola lo start per compensare la lettura (“readout margin”).'''
          
-        # Make taxi distance an integer number of measurement deltas >= accel distance
+     
+#------------------------------
+
+
+
+# Make taxi distance an integer number of measurement deltas >= accel distance
         # Add 1/2 of a delta to ensure that we are really up to speed.
         if overall_sense>0:
-            self.rotation_start_new = self.rotation_start
+            self.rotation_start_new = self.rotation_start       #---------> rotation star e' taxi start ? conteggi da inviare FPGA
         else:
             self.rotation_start_new  = self.rotation_start-(2-self.readout_margin)*self.rotation_step
 
