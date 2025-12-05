@@ -47,14 +47,12 @@ print("Angoli interlacciati (°):")
 print(angles_timbir)
 
 #-----------------------------------------------------------------
-# Assign radius based on loop
-# Ogni loop ha un raggio diverso per visualizzazione
+# ogni loop ha un raggio diverso per visualizzazione
 #-----------------------------------------------------------------
 radii = r_outer - loop_indices * r_step
 
 #-----------------------------------------------------------------
-# Plot acquisition sequence
-# Qui rappresentiamo la sequenza degli angoli nel piano polare
+#  sequenza degli angoli nel piano polare
 #-----------------------------------------------------------------
 fig = plt.figure(figsize=(7,7))
 ax = fig.add_subplot(111, polar=True)
@@ -98,27 +96,31 @@ raw_delta_encoder_counts = angles_timbir * encoder_multiply
 # Arrotondamento perché il PSO accetta solo valori interi
 delta_encoder_counts = np.round(raw_delta_encoder_counts).astype(int)
 
-# Rotation step reale (dopo arrotondamento)
-# trasformo counts in angolo reale per vedere a quanti gradi reali corrispondono
+# Rotation step reale (dopo arrotondamento): trasformo counts in angolo reale per vedere a quanti gradi reali corrispondono
 rotation_step_real_deg = delta_encoder_counts / encoder_multiply
 
-#-----------------------------------------------------------------
-# Plot degli impulsi e dell'angolo reale dopo quantizzazione
-#-----------------------------------------------------------------
 plt.figure(figsize=(12,5))
 
-plt.subplot(1,2,1)
-plt.plot(angles_timbir, delta_encoder_counts, '.-')
-plt.xlabel("Angolo ideale (°)")
-plt.ylabel("Count PSO (arrotondato)")
-plt.title("Angolo in impulsi PSO (con arrotondamento)")
-plt.grid(True)
+# --- PLOT ---
 
-plt.subplot(1,2,2)
-plt.plot(angles_timbir, rotation_step_real_deg, '.-')
-plt.xlabel("Angolo ideale (°)")
-plt.ylabel("Angolo reale (°)")
-plt.title("Impulsi PSO → Angolo reale (dopo arrotondamento)")
+t = np.arange(len(angles_timbir))   # tempo / indice acquisizione
+
+plt.figure(figsize=(14,6))
+
+# --- Curve principali ---
+plt.plot(t, rotation_step_real_deg, '.-', color='blue', label='Angolo reale (°)')
+plt.plot(t, delta_encoder_counts, '.-', color='orange', label='Count PSO')
+
+# --- Linee verticali che collegano i due valori ---
+for i in range(len(t)):
+    plt.plot([t[i], t[i]],
+             [rotation_step_real_deg[i], delta_encoder_counts[i]],
+             color='gray', alpha=0.4, linewidth=0.8)
+
+plt.xlabel("Tempo / Indice acquisizione")
+plt.ylabel("Valore")
+plt.title("Angolo reale e Count PSO con linee verticali di corrispondenza")
+plt.legend()
 plt.grid(True)
 
 plt.tight_layout()
