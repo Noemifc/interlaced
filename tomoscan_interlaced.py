@@ -181,12 +181,55 @@ Per num_angles punti.
 
 
 
+# --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+# TOMOSCAN FUNCTION : compute_senses
+# ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+'''Definisce una funzione membro (self) che calcola il verso del movimento.
+Serve a capire due cose:
+La direzione rispetto al contatore dell’encoder (incrementa o decrementa).
+La direzione rispetto all’utente (cioè da dove parte a dove arriva il movimento).'''
 
 
+    def _compute_senses(self):
+        '''Computes whether this motion will be increasing or decreasing encoder counts.
+        
+        user direction, overall sense.
+        '''
+        # Encoder direction compared to dial coordinates  serve a capire come l’encoder incrementa rispetto alla rotazione fisica.
+        encoder_dir = 1 if self.epics_pvs['PSOCountsPerRotation'].get() > 0 else -1  #Legge il PV (Process Variable) di EPICS PSOCountsPerRotation e il numero di conteggi per rotazione è positivo → encoder_dir = +1
+       
+        
+        # Get motor direction (dial vs. user); convert (0,1) = (pos, neg) to (1, -1)
+        motor_dir = 1 if self.epics_pvs['RotationDirection'].get() == 0 else -1   #La logica interna della macchina usa 0 per positivo, 1 per negativo. Qui la convertiamo in +1 o -1 per poter moltiplicare facilmente dopo.
+      ''' Controlla la direzione voluta dall’utente:
 
+Se rotation_stop > rotation_start, l’utente vuole un movimento positivo.
+Altrimenti, negativo.
+Serve per distinguere il movimento reale da quello relativo all’encoder.
+      '''
+    
+        # Figure out whether motion is in positive or negative direction in user coordinates
+        user_direction = 1 if self.rotation_stop > self.rotation_start else -1
+''' Stampa sul log per debug i valori calcolati: (encoder_dir, motor_dir, user_direction).
+Utile per capire se i tre segnali sono coerenti e se la moltiplicazione finale darà la direzione corretta.
+'''
+        
+        # Figure out overall sense: +1 if motion in + encoder direction, -1 otherwise
+        log.debug((encoder_dir, motor_dir, user_direction))
 
+'''Calcola il verso complessivo del movimento come prodotto:
 
+encoder_dir * motor_dir * user_direction
 
+Risultato +1 → il movimento aumenta i conteggi dell’encoder.
+
+Risultato -1 → il movimento diminuisce i conteggi.
+
+Ritorna anche user_direction separatamente, utile se vuoi sapere solo la direzione "logica" dell’utente.
+
+'''
+        return user_direction * motor_dir * encoder_dir, user_direction
+        
 
 
 
