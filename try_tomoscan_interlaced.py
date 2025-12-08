@@ -6,238 +6,201 @@ pulses_interlaced_real     = conversione taxi-corretta
 
 """
 import numpy as np
-import struct
 import math
-import matplotlib.pyplot as plt
-
 
 # ============================================================================
-#               CLASSE InterlacedScan 
+#                       TOMOSCAN INTERLACED OFFLINE (NO EPICS)
+#            nomenclatura e semantica identica a TomoScanPSO
 # ============================================================================
 
-class InterlacedScan:
+class TomoScanInterlacedOffline:
 
-    """
-    Classe completa per scansione TIMBIR:
-
-    1) Genera angoli TIMBIR usando bit-reversal
-    2) Ordina gli angoli in senso crescente
-    3) Simula il moto reale del piatto con correzione TAXI:
-         - accelerazione
-         - moto a velocità costante
-         - decelerazione
-    4) Calcola l'angolo effettivamente raggiunto nel tempo (θ_real)
-    5) Converte angoli ideali e reali in impulsi encoder assoluti
-    6) Scrive il file pulses.bin pronto da caricare sulla FPGA
-    7) Produce grafici
-
-    """
-
-    # ----------------------------------------------------------------------
     def __init__(self,
-                 N_theta=32,                   # numero di proiezioni
-                 K=4,                          # interlacciamento TIMBIR
-                 PSOCountsPerRotation=20000,   # impulsi encoder per giro
-                 accel=5,                      # accelerazione (deg/s^2)
-                 decel=5,                      # decelerazione (deg/s^2)
-                 omega_target=10,              # velocità target (deg/s)
-                 dt=1e-4):                     # risoluzione temporale per simulazione
+                 rotation_start=0.0,
+                 rotation_stop=360.0,
+                 num_angles=32,
+                 PSOCountsPerRotation=20000,
+                 RotationDirection=0,
+                 RotationAccelTime=0.15,
+                 exposure=0.01,
+                 readout=0.01,
+                 readout_margin=1):
 
-        # Parametri della scansione TIMBIR
-        self.N_theta = N_theta
-        self.K = K
+        # --- Parametri identici a TomoScanPSO ---
+        self.rotation_start = rotation_start
+        self.rotation_stop  = rotation_stop
+        self.num_angles     = num_angles
 
-        # Parametri encoder
         self.PSOCountsPerRotation = PSOCountsPerRotation
-        self.pulses_per_degree = PSOCountsPerRotation / 360.0
+        self.RotationDirection = RotationDirection
+        self.RotationAccelTime = RotationAccelTime
 
-        # Parametri dinamica TAXI
-        self.accel = accel
-        self.decel = decel
-        self.omega_target = omega_target
-        self.dt = dt
+        self.exposure = exposure
+        self.readout  = readout
+        self.readout_margin = readout_margin
 
-    # ============================================================================
-    #                    BIT–REVERSAL → SEQUENZA TIMBIR
-    # ============================================================================
-    def bit_reverse(self, n, bits):
-        """
-        Inverte i bit di n.
-        Es: 3 (0011) → 12 (1100).
-        """
-        b = f'{n:0{bits}b}'
-        return int(b[::-1], 2)
+        # step angolare nominale (verrà aggiustato nella compute_positions_PSO)
+        self.rotation_step = (rotation_stop - rotation_start) / (num_angles - 1)
 
-    def generate_timbir_angles(self):
-        """
-        Genera gli angoli TIMBIR in gradi.
-        - Usa bit-reversal
-        - Poi li ORDINA in ordine crescente (richiesto dalla FPGA)
-        """
-        bits = int(np.log2(self.N_theta))
+        # campi riempiti più avanti
+        self.theta_classic = None
+        self.theta_interlaced = None
 
-        # Genera la sequenza TIMBIR non ordinata
-        theta = np.array([
-            self.bit_reverse(n, bits) * 360.0 / self.N_theta
-            for n in range(self.N_theta)
-        ])
 
-        # Ordine crescente per generare una lista monotòna
-        return np.sort(theta)
+    # ------------------------------------------------------------------------
+    # IDENTICO A TomoScanPSO.compute_senses()
+    # ------------------------------------------------------------------------
+    def compute_senses(self):
+        encoder_dir = 1 if self.PSOCountsPerRotation > 0 else -1
+        motor_dir   = 1 if self.RotationDirection == 0 else -1
+        user_dir    = 1 if self.rotation_stop > self.rotation_start else -1
+        overall = encoder_dir * motor_dir * user_dir
+        return overall, user_dir
+    
 
-    # ============================================================================
-    #                        SIMULAZIONE MOTORE (TAXI)
-    # ============================================================================
-    def simulate_taxi_motion(self):
-        """
-        Simula l'intero moto del piatto:
-        - Accelerazione da 0 a velocità target
-        - Moto a velocità costante
-        - Decelerazione fino a fermarsi
+    # ------------------------------------------------------------------------
+    def compute_frame_time(self):
+        return self.exposure + self.readout
 
-        Restituisce:
-        - t_vec     : vettore dei tempi
-        - theta_vec : angolo reale raggiunto ad ogni istante
-        """
 
-        accel = self.accel
-        decel = self.decel
-        omega_target = self.omega_target
-        dt = self.dt
-        theta_total = 360.0
+    # ------------------------------------------------------------------------
+    # EQUIVALENTE A compute_positions_PSO DI TOMOSCANPSO (senza EPICS)
+    # ------------------------------------------------------------------------
+    def compute_positions_PSO(self):
 
-        # --- Fase di accelerazione ---
-        T_acc = omega_target / accel
-        t_acc = np.arange(0, T_acc, dt)
-        theta_acc = 0.5 * accel * t_acc**2
+        overall_sense, user_direction = self.compute_senses()
+        encoder_multiply = self.PSOCountsPerRotation / 360.0
 
-        # --- Plateau a velocità costante ---
-        theta_flat_len = theta_total - 2 * theta_acc[-1]  # angolo per moto rettilineo
-        T_flat = theta_flat_len / omega_target
-        t_flat = np.arange(0, T_flat, dt)
-        theta_flat = theta_acc[-1] + omega_target * t_flat
+        # step angolare → impulsi interi
+        raw_counts = self.rotation_step * encoder_multiply
+        delta_counts = round(raw_counts)
 
-        # --- Decelerazione ---
-        T_dec = omega_target / decel
-        t_dec = np.arange(0, T_dec, dt)
-        theta_dec = theta_flat[-1] + omega_target*t_dec - 0.5*decel*t_dec**2
+        # aggiorno come TomoScanPSO
+        self.rotation_step = delta_counts / encoder_multiply
 
-        # --- Vettori completi ---
-        t_vec = np.concatenate([
-            t_acc,
-            t_acc[-1] + t_flat,
-            t_acc[-1] + t_flat[-1] + t_dec
-        ])
+        # velocità reale
+        dt = self.compute_frame_time()
+        self.motor_speed = abs(self.rotation_step) / dt
 
-        theta_vec = np.concatenate([
-            theta_acc,
-            theta_flat,
-            theta_dec
-        ])
+        # TAXI
+        accel_dist = 0.5 * self.motor_speed * self.RotationAccelTime
 
-        return t_vec, theta_vec
+        if overall_sense > 0:
+            self.rotation_start_new = self.rotation_start
+        else:
+            self.rotation_start_new = self.rotation_start - (2 - self.readout_margin) * self.rotation_step
 
-    # ============================================================================
-    #                   INVERSIONE θ(t) → t(θ)
-    # ============================================================================
-    def invert_theta(self, theta_vec, t_vec, theta_targets):
-        """
-        Trova il tempo t per cui θ(t) = θ_target.
-        Usa interpolazione inversa.
-        """
-        return np.interp(theta_targets, theta_vec, t_vec)
+        taxi_steps = math.ceil((accel_dist / abs(self.rotation_step)) + 0.5)
+        taxi_dist  = taxi_steps * abs(self.rotation_step)
 
-    # ============================================================================
-    #                   ANGOLO → IMPULSI ABSOLUTI
-    # ============================================================================
-    def convert_to_counts(self, theta):
-        """
-        Converte angolo in impulsi PSO da mandare alla FPGA.
-        Impulsi assoluti (non differenze).
-        """
-        return np.round(theta * self.pulses_per_degree).astype(np.uint32)
+        self.PSOStartTaxi = self.rotation_start_new - taxi_dist * user_direction
 
-    # ============================================================================
-    #                         PIPELINE COMPLETA
-    # ============================================================================
-    def compute(self):
-        """
-        Esegue l'intera pipeline TIMBIR + TAXI + conversione impulsi.
-        """
+        self.rotation_stop_new = self.rotation_start_new + (self.num_angles - 1) * self.rotation_step
+        self.PSOEndTaxi = self.rotation_stop_new + taxi_dist * user_direction
 
-        # 1) Angoli TIMBIR ordinati
-        self.theta_interlaced = self.generate_timbir_angles()
+        # theta "classica" identica a TomoScan
+        self.theta_classic = self.rotation_start_new + np.arange(self.num_angles) * self.rotation_step
 
-        # 2) Simulazione del moto TAXI
-        t_vec, theta_vec = self.simulate_taxi_motion()
+        return self.theta_classic, self.PSOStartTaxi, self.PSOEndTaxi
 
-        # 3) Trovo il tempo in cui viene raggiunto ogni angolo TIMBIR
-        t_real = self.invert_theta(theta_vec, t_vec, self.theta_interlaced)
 
-        # 4) Calcolo l'angolo reale (corretto)
-        self.theta_interlaced_real = np.interp(t_real, t_vec, theta_vec)
+# ============================================================================
+#                      TIMBIR INTERLACED ANGLES
+# ============================================================================
 
-        # 5) Conversione in impulsi PSO
-        self.pulses_interlaced_ideal = self.convert_to_counts(self.theta_interlaced)
-        self.pulses_interlaced_real  = self.convert_to_counts(self.theta_interlaced_real)
+def bit_reverse(n, bits):
+    return int(f"{n:0{bits}b}"[::-1], 2)
 
-        return self
+def generate_timbir_angles(N, K):
+    bits = int(np.log2(N))
+    return np.array([bit_reverse(n, bits) * 360.0 / N for n in range(N)])
 
-    # ============================================================================
-    #                           A) GENERA pulses.bin
-    # ============================================================================
-    def save_pulses_bin(self, filename="pulses.bin", use_real=True):
-        """
-        Scrive direttamente il file pulses.bin compatibile con FPGA.
-        - uint32
-        - little-endian
-        """
 
-        data = self.pulses_interlaced_real if use_real else self.pulses_interlaced_ideal
+# ============================================================================
+#                      TAXI MODEL
+# ============================================================================
 
-        with open(filename, "wb") as f:
-            for val in data:
-                f.write(struct.pack("<I", int(val)))
+def simulate_taxi_motion(accel, decel, omega_target, theta_total=360.0, dt=1e-4):
 
-        print(f"\n✔ File '{filename}' generato ({len(data)} impulsi).")
+    T_acc = omega_target / accel
+    t_acc = np.arange(0, T_acc, dt)
+    theta_acc = 0.5 * accel * t_acc**2
 
-    # ============================================================================
-    #                           B) GRAFICI DIAGNOSTICI
-    # ============================================================================
-    def plot_diagnostics(self):
-        """
-        Produce tre grafici:
-        1) Angolo ideale vs angolo reale
-        2) Errore angolare in gradi
-        3) Errore sugli impulsi
-        """
+    theta_flat_len = theta_total - 2 * theta_acc[-1]
+    T_flat = theta_flat_len / omega_target
+    t_flat = np.arange(0, T_flat, dt)
+    theta_flat = theta_acc[-1] + omega_target * t_flat
 
-        err_deg = self.theta_interlaced_real - self.theta_interlaced
-        err_counts = self.pulses_interlaced_real - self.pulses_interlaced_ideal
-        t = np.arange(len(self.theta_interlaced))
+    T_dec = omega_target / decel
+    t_dec = np.arange(0, T_dec, dt)
+    theta_dec = theta_flat[-1] + omega_target*t_dec - 0.5*decel*t_dec**2
 
-        # --- Grafico angoli ---
-        plt.figure(figsize=(14, 6))
-        plt.plot(t, self.theta_interlaced, 'o-', label="Ideale (TIMBIR)")
-        plt.plot(t, self.theta_interlaced_real, 'o-', label="Reale (Taxi)")
-        plt.title("Angoli: Ideale vs Reale (Taxi Corretti)")
-        plt.xlabel("Indice acquisizione")
-        plt.ylabel("Angolo (°)")
-        plt.grid(True); plt.legend()
+    t = np.concatenate([t_acc, t_acc[-1] + t_flat, t_acc[-1] + t_flat[-1] + t_dec])
+    theta = np.concatenate([theta_acc, theta_flat, theta_dec])
 
-        # --- Errore angolare ---
-        plt.figure(figsize=(14, 5))
-        plt.plot(t, err_deg, 'o-')
-        plt.title("Errore angolare (reale - ideale)")
-        plt.xlabel("Indice"); plt.ylabel("Errore (°)")
-        plt.grid(True)
+    return t, theta
 
-        # --- Errore impulsi ---
-        plt.figure(figsize=(14, 5))
-        plt.plot(t, err_counts, 'o-')
-        plt.title("Errore impulsi (reale - ideale)")
-        plt.xlabel("Indice"); plt.ylabel("Errore (counts)")
-        plt.grid(True)
 
-        plt.show()
-        print("\n✔ Grafici diagnostici generati.")
+def invert_theta(theta_real, t_vec, theta_targets):
+    return np.interp(theta_targets, theta_real, t_vec)
+
+
+# ============================================================================
+#                IMPULSI — NOMENCLATURA TOMOSCAN STYLE
+# ============================================================================
+
+def convert_to_counts(theta, pulses_per_degree):
+    return np.round(theta * pulses_per_degree).astype(int)
+
+
+# ============================================================================
+#                PIPELINE COMPLETA OFFLINE INTERLACED
+# ============================================================================
+def compute_interlaced_offline(N_theta, K,
+                               RotationAccelTime=0.15,
+                               PSOCountsPerRotation=20000,
+                               omega_target=10):
+
+    scan = TomoScanInterlacedOffline(
+        num_angles=N_theta,
+        RotationAccelTime=RotationAccelTime,
+        PSOCountsPerRotation=PSOCountsPerRotation
+    )
+
+    # 1) Tomoscan-like parameters
+    theta_classic, taxi_start, taxi_end = scan.compute_positions_PSO()
+
+    pulses_per_degree = PSOCountsPerRotation / 360.0
+
+    # 2) TIMBIR → angoli interlacciati ORDINATI
+    theta_inter = generate_timbir_angles(N_theta, K)
+    idx = np.argsort(theta_inter)
+    theta_inter_sorted = theta_inter[idx]
+    scan.theta_interlaced = theta_inter_sorted
+
+    # 3) TAXI MODEL
+    t, theta_real_curve = simulate_taxi_motion(
+        accel=omega_target / RotationAccelTime,
+        decel=omega_target / RotationAccelTime,
+        omega_target=omega_target,
+        theta_total=360.0
+    )
+
+    t_real = invert_theta(theta_real_curve, t, theta_inter_sorted)
+    theta_real_corrected = np.interp(t_real, t, theta_real_curve)
+
+    # 4) IMPULSI coerenti con TomoScanPSO
+    PSOCountsIdeal = convert_to_counts(theta_inter_sorted, pulses_per_degree)
+    PSOCountsTaxiCorrected = convert_to_counts(theta_real_corrected, pulses_per_degree)
+    PSOCountsFinal = PSOCountsTaxiCorrected.copy()
+
+    return {
+        "theta_interlaced": theta_inter_sorted,
+        "theta_real": theta_real_corrected,
+        "PSOCountsIdeal": PSOCountsIdeal,
+        "PSOCountsTaxiCorrected": PSOCountsTaxiCorrected,
+        "PSOCountsFinal": PSOCountsFinal,
+        "theta_classic": theta_classic,
+        "PSOStartTaxi": taxi_start,
+        "PSOEndTaxi": taxi_end
+    }
