@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 
 
 # ============================================================================
-#               CLASSE InterlacedScan (UFFICIALE, COMPLETAMENTE COMMENTATA)
+#               CLASSE InterlacedScan 
 # ============================================================================
 
 class InterlacedScan:
