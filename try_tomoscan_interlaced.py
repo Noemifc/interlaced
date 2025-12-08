@@ -18,20 +18,19 @@ import matplotlib.pyplot as plt
 class InterlacedScan:
 
     """
-    Questa classe implementa una pipeline completa per una scansione TIMBIR:
+    Classe completa per scansione TIMBIR:
 
-    1) Genera angoli TIMBIR usando bit-reversal.
-    2) Ordina gli angoli in senso crescente (richiesto dalla FPGA).
-    3) Simula il moto reale del piatto (modello TAXI):
+    1) Genera angoli TIMBIR usando bit-reversal
+    2) Ordina gli angoli in senso crescente
+    3) Simula il moto reale del piatto con correzione TAXI:
          - accelerazione
          - moto a velocità costante
          - decelerazione
-    4) Calcola l'angolo effettivamente raggiunto nel tempo (θ_real).
-    5) Converte angoli ideali e reali in impulsi encoder assoluti.
-    6) Scrive il file pulses.bin pronto da caricare sulla FPGA.
-    7) Produce grafici diagnostici per verificare eventuali differenze.
+    4) Calcola l'angolo effettivamente raggiunto nel tempo (θ_real)
+    5) Converte angoli ideali e reali in impulsi encoder assoluti
+    6) Scrive il file pulses.bin pronto da caricare sulla FPGA
+    7) Produce grafici
 
-    Tutto è commentato e indipendente da Tomoscan/EPICS.
     """
 
     # ----------------------------------------------------------------------
