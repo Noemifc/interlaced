@@ -50,57 +50,81 @@ class InterlacedScan:
         self.K_interlace    = K_interlace      # nuovo pv
 
         # Parametri hardware
-        self.PSOCountsPerRotation = PSOCountsPerRotation
-        self.RotationDirection    = RotationDirection
-        self.RotationAccelTime    = RotationAccelTime
+        self.PSOCountsPerRotation = PSOCountsPerRotation  # num impulsi encoder generati per 360 deg
+        self.RotationDirection    = RotationDirection     # direzione positiva o negativa del motore
+        self.RotationAccelTime    = RotationAccelTime     # tempo [s] che il motore impiega per raggiungere la velocità di scansione
 
         # Parametri camera
         self.exposure = exposure
         self.readout  = readout
         self.readout_margin = readout_margin
 
-        # Step iniziale  
+        # Distanza angolare tra due proiezioni consecutive: lo spacing nominale tra gli angoli
         self.rotation_step = (rotation_stop - rotation_start) / (num_angles - 1)
-
+'''
+divide l'intervallo di scansione in N punti equidistanti: serve alla parte meccanica per stabilire la velocità motore, velocità taxi
+ finestra PSO e conversione in impulsi 
+ la cinematica del motore richiede comunque uno spacing nominale costante
+'''
     # ----------------------------------------------------------------------
-    # Funzione identica a TomoScanPSO.compute_senses()
+    #  TomoScanPSO.compute_senses()
     # ----------------------------------------------------------------------
+'''Determina in che direzione il sistema encoder conterà gli impulsi durante la scansione: utile per PSO, taxi
+Bisogna capire il il verso finale del movimento perchè può muoversi in diverso senso
+'''
     def compute_senses(self):
-        """
-        Determina la direzione del moto rispetto agli impulsi encoder,
-        come nella versione reale di TomoScanPSO.
-        """
+      
         encoder_dir = 1 if self.PSOCountsPerRotation > 0 else -1
         motor_dir   = 1 if self.RotationDirection == 0 else -1
         user_dir    = 1 if self.rotation_stop > self.rotation_start else -1
         return encoder_dir * motor_dir * user_dir, user_dir
 
     # ----------------------------------------------------------------------
+    #  Tempo per Frame
+    # ----------------------------------------------------------------------
+''' tempo totale richiesto dalla camera per acquisire una singola immagine, utile per calcolare la velocità di rotazione
+    Tempo totale per frame = esposizione + readout
+'''
     def compute_frame_time(self):
-        """Tempo totale per frame = esposizione + readout"""
+     
         return self.exposure + self.readout
+        
+''' nell exposure time il sensore vede il fascio, accumula fotoni e qui il 
+movimento del campione dovrebbe essere lento o costante per evitare blur
++ readout dove la camera non può acquisire un nuovo frame
+'''
 
     # ----------------------------------------------------------------------
-    # Replica fedele della logica compute_positions_PSO di TomoScanPSO
+    #  compute_positions_PSO() come TomoScan
     # ----------------------------------------------------------------------
-    def compute_positions_PSO(self):
-        """
-        Calcola rotation_step corretto (in impulsi interi),
-        taxi start/end e vettore degli angoli equispaziati nominali.
-        """
-        overall_sense, user_direction = self.compute_senses()
-        encoder_multiply = self.PSOCountsPerRotation / 360.0
+'''  Come il motore si muove effettivamente  con   rotation_step in impulsi interi
+
+'''
+     def compute_positions_PSO(self):
+        
+        overall_sense, user_direction = self.compute_senses()  # determinare in quale direzione si muovono gli impulsi encoder, se aumentano o diminuiscono  e +/- 1 da user
+        encoder_multiply = self.PSOCountsPerRotation / 360.0   # fattore di coversione  da angoli ad impulsi (impulsi per grado)
+
+        '''  overall_sense= se impulsi encoder aumentano o diminuiscono 
+            user_direction direzione della scansione in deg
+        '''
 
         # Correzione step per avere impulsi interi
-        raw_counts = self.rotation_step * encoder_multiply
-        delta_counts = round(raw_counts)
-        self.rotation_step = delta_counts / encoder_multiply
+        raw_counts = self.rotation_step * encoder_multiply    # impulsi raw 
+        delta_counts = round(raw_counts)                      # rounding : impulsi che effettivamente il motore farà
+        self.rotation_step = delta_counts / encoder_multiply  # impulsi reali nell'angolo considerato
 
         # Velocità del motore
-        dt = self.compute_frame_time()
-        self.motor_speed = abs(self.rotation_step) / dt
+        dt = self.compute_frame_time()                        # tempo di un frame 
+        self.motor_speed = abs(self.rotation_step) / dt       # motor_speed = step_angolare / tempo_per_frame
 
-        # Distanza necessaria per accelerare
+        # Distanza necessaria per accelerare s = 1/2 * v * t
+         '''
+         v = motor_speed → velocità finale da raggiungere
+         t = RotationAccelTime → tempo necessario per raggiungerla
+         s = accel_dist → distanza angolare necessaria per accelerare
+         '''
+
         accel_dist = 0.5 * self.motor_speed * self.RotationAccelTime
 
         # Rotazione di partenza corretta
@@ -126,7 +150,12 @@ class InterlacedScan:
     def bit_reverse(self, n, bits):
         return int(f"{n:0{bits}b}"[::-1], 2)
 
+      # ----------------------------------------------------------------------
+    #  
     # ----------------------------------------------------------------------
+'''  
+'''
+ 
     def generate_interlaced_angles(self):
         """
         Genera gli angoli TIMBIR interlacciati, ordinati in senso crescente.
