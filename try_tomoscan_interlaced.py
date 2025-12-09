@@ -13,43 +13,41 @@ import struct
 import matplotlib.pyplot as plt
 
 # ============================================================================
-#                     CLASSE INTERLACED SCAN (OFFLINE)
-#     Replica la logica di TomoScanPSO, ma senza EPICS e con TIMBIR + TAXI
+#                     CLASSE INTERLACED SCAN 
 # ============================================================================
 
 class InterlacedScan:
     """
-    Classe che implementa:
-        - logica nominale di TomoScanPSO (step, taxi, sensi)
+        - logica nominale di TomoScanPSO 
         - generazione angoli interlacciati TIMBIR
-        - modello cinematico del taxi (accelerazione/decelerazione)
-        - conversione angoli → impulsi
-        - esportazione impulsi in formato binario per memPulseSeq
-        - grafici diagnostici
+        - correzione taxi  
+        - conversione angoli to impulsi
+        - esportazione impulsi in formato binario per memPulseSeq 
+        - grafici di verifica 
 
-    Tutta la nomenclatura è coerente con TomoScanPSO.
+     nomenclatura è coerente con TomoScanPSO
     """
 
     # ----------------------------------------------------------------------
-    # COSTRUTTORE — identico per nomenclatura ai parametri TomoScanPSO
+    # init e parametri
     # ----------------------------------------------------------------------
     def __init__(self,
-                 rotation_start=0.0,
-                 rotation_stop=360.0,
-                 num_angles=32,
-                 PSOCountsPerRotation=20000,
-                 RotationDirection=0,
-                 RotationAccelTime=0.15,
-                 exposure=0.01,
-                 readout=0.01,
-                 readout_margin=1,
-                 K_interlace=4):
+                 rotation_start = 0.0,
+                 rotation_stop = 360.0,
+                 num_angles = 32,        
+                 PSOCountsPerRotation = 20000,
+                 RotationDirection = 0,
+                 RotationAccelTime = 0.15,
+                 exposure = 0.01,
+                 readout = 0.01,
+                 readout_margin = 1,
+                 K_interlace = 4):      
 
         # Parametri di scansione
-        self.rotation_start = rotation_start
-        self.rotation_stop  = rotation_stop
-        self.num_angles     = num_angles
-        self.K_interlace    = K_interlace
+        self.rotation_start = rotation_start   # angolo iniziale della scansione 
+        self.rotation_stop  = rotation_stop    # angolo finale della scansione 
+        self.num_angles     = num_angles       # num proiezioni, nuovo pv
+        self.K_interlace    = K_interlace      # nuovo pv
 
         # Parametri hardware
         self.PSOCountsPerRotation = PSOCountsPerRotation
@@ -61,7 +59,7 @@ class InterlacedScan:
         self.readout  = readout
         self.readout_margin = readout_margin
 
-        # Step iniziale (verrà adattato a interi impulsi encoder)
+        # Step iniziale  
         self.rotation_step = (rotation_stop - rotation_start) / (num_angles - 1)
 
     # ----------------------------------------------------------------------
