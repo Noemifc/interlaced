@@ -176,62 +176,73 @@ def generate_interlaced_timbir_angles(self):
 
 
     # ----------------------------------------------------------------------
-    # Modello cinematico del taxi
+    # Modello  taxi
     # ----------------------------------------------------------------------
+'''
+omega_target = velocità angolare durante il tratto uniforme
+dt = passo temporale di simulazione
+
+con 
+- accelerazione = parte da 0 e arriva a ω_target
+- regime = ruota a ω_target (velocità costante)
+- decelerazione = rallenta da ω_target a 0
+'''
     def simulate_taxi_motion(self, omega_target=10, dt=1e-4):
-        """
-        Simula accelerazione = regime = decelerazione
-        per modellare angolo reale(t).
-        """
+       # accelerazione e decelerazione
         accel = decel = omega_target / self.RotationAccelTime
+           
+        T_acc = omega_target / accel                  
+        t_acc = np.arange(0, T_acc, dt)                    # vettore di tempi che descrive tutti gli istanti durante la fase di accelerazione  da 0 a T_acc , usa passo dt
+        theta_acc = 0.5 * accel * t_acc**2                 # moto uniformemente accelerato 
+     
+        # parte centrale ad omega cost
+        theta_flat_len = 360 - 2 * theta_acc[-1]           # numero di gradi totali che il motore percorre nella fase a velocità costante
+        T_flat = theta_flat_len / omega_target             # quanti secondi dura la fase a velocità costante
+        t_flat = np.arange(0, T_flat, dt)                  # vettore dei tempi per T_flat
+        theta_flat = theta_acc[-1] + omega_target * t_flat # calcolo angolo per ogni istante a v cost 
+        #          = gradi raggiunti dopo accelerazione + v cost x tempo
 
-        T_acc = omega_target / accel
-        t_acc = np.arange(0, T_acc, dt)
-        theta_acc = 0.5 * accel * t_acc**2
-
-        theta_flat_len = 360 - 2 * theta_acc[-1]
-        T_flat = theta_flat_len / omega_target
-        t_flat = np.arange(0, T_flat, dt)
-        theta_flat = theta_acc[-1] + omega_target * t_flat
-
+      # speculare   
         T_dec = omega_target / decel
         t_dec = np.arange(0, T_dec, dt)
         theta_dec = theta_flat[-1] + omega_target*t_dec - 0.5*decel*t_dec**2
 
         self.t_vec = np.concatenate([t_acc, t_acc[-1] + t_flat,
-                                     t_acc[-1] + t_flat[-1] + t_dec])
-        self.theta_vec = np.concatenate([theta_acc, theta_flat, theta_dec])
-
+                                     t_acc[-1] + t_flat[-1] + t_dec])                  # t_vec = vettore del tempo continuo da 0 fino alla fine del moto
+        self.theta_vec = np.concatenate([theta_acc, theta_flat, theta_dec])             # theta_vec =  angoli reali generati dal modello cinematico
+        
+''' Shift:
+- accelerazione = finisce a t_acc[-1]
+- flat = deve iniziare esattamente dopo
+- decelerazione = deve iniziare esattamente alla fine del regime
+'''
+    
     # ----------------------------------------------------------------------
+     # tempo reale a cui il motore raggiunge ogni angolo TIMBIR
+    # ----------------------------------------------------------------------
+''' angoli TIMBIR = tempi reali
+    tempi reali = angoli reali
+'''
     def compute_real_motion(self):
-        """Trova i tempi reali in cui vengono raggiunti gli angoli TIMBIR."""
-        self.t_real = np.interp(self.theta_interlaced, self.theta_vec, self.t_vec)
-        self.theta_real = np.interp(self.t_real, self.t_vec, self.theta_vec)
-
+        
+        self.t_real = np.interp(self.theta_interlaced, self.theta_vec, self.t_vec)    # tempo reale a cui il motore raggiunge ogni angolo TIMBIR
+        self.theta_real = np.interp(self.t_real, self.t_vec, self.theta_vec)          # angolo effettivamente raggiunto dal motore in quel momento
+    
+    # ----------------------------------------------------------------------
+    # Converte angoli = impulsi PSO assoluti
     # ----------------------------------------------------------------------
     def convert_angles_to_counts(self):
-        """Converte angoli = impulsi PSO assoluti."""
+      
         pulses_per_degree = self.PSOCountsPerRotation / 360.0
-        self.PSOCountsIdeal = np.round(self.theta_interlaced * pulses_per_degree).astype(int)
-        self.PSOCountsTaxiCorrected = np.round(self.theta_real * pulses_per_degree).astype(int)
-        self.PSOCountsFinal = self.PSOCountsTaxiCorrected.copy()
+        self.PSOCountsIdeal = np.round(self.theta_interlaced * pulses_per_degree).astype(int)    # conversione degli angoli TIMBIR ideali in impulsi ideali
+        self.PSOCountsTaxiCorrected = np.round(self.theta_real * pulses_per_degree).astype(int)  # converte angoli reali ( quelli corretti da taxi) in impulsi encoder assoluti
+      
+        self.PSOCountsFinal = self.PSOCountsTaxiCorrected.copy()         # copia gli impulsi taxi-corretti nel vettore finale da inviare alla FPGA
+
+ '''impulsi che voglio inviare se il motore si muovesse perfettamente senza accelerazioni e ritardi''''
 
     # ----------------------------------------------------------------------
-    # A — Salvataggio impulsi per memPulseSeq in formato BINARIO
-    # ----------------------------------------------------------------------
-    def save_pulses_bin(self, filename="pulses.bin"):
-        """
-        Salva gli impulsi assoluti in formato binario 32-bit LE,
-        compatibile con memPulseSeq.
-        """
-        with open(filename, "wb") as f:
-            for p in self.PSOCountsFinal:
-                f.write(struct.pack("<i", int(p)))
-
-        print(f"[OK] Salvato file binario per FPGA: {filename}")
-
-    # ----------------------------------------------------------------------
-    # B — Grafico diagnostico
+    # Grafico
     # ----------------------------------------------------------------------
     def plot_diagnostics(self):
         plt.figure(figsize=(12,6))
