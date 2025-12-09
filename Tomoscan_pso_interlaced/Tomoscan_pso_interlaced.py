@@ -10,14 +10,13 @@ import matplotlib.pyplot as plt
 
 class InterlacedScan:
     """
-        - logica nominale di TomoScanPSO 
+        - logica TomoScanPSO e nomenclatura
         - generazione angoli interlacciati TIMBIR
         - correzione taxi  
         - conversione angoli to impulsi
         - esportazione impulsi in formato binario per memPulseSeq 
         - grafici di verifica 
 
-     nomenclatura è coerente con TomoScanPSO
     """
 
     # ----------------------------------------------------------------------
