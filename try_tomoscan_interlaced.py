@@ -120,22 +120,25 @@ movimento del campione dovrebbe essere lento o costante per evitare blur
 
         # Distanza necessaria per accelerare s = 1/2 * v * t
          '''
-         v = motor_speed → velocità finale da raggiungere
-         t = RotationAccelTime → tempo necessario per raggiungerla
-         s = accel_dist → distanza angolare necessaria per accelerare
+         v = motor_speed = velocità finale da raggiungere
+         t = RotationAccelTime = tempo necessario per raggiungerla
+         s = accel_dist = distanza angolare necessaria per accelerare
          '''
 
-        accel_dist = 0.5 * self.motor_speed * self.RotationAccelTime
+        accel_dist = 0.5 * self.motor_speed * self.RotationAccelTime  #  distanza angolare necessaria per accelerare
 
-        # Rotazione di partenza corretta
+        # Rotazione di partenza corretta e interpretazione corretta per il PSO
+''' overall_sense > 0   =  impulsi encoder aumentano con la rotazione se < 0 è necessario nuovo offset
+    vedere da quale angolo reale far partire il motore affinchè il primo impulso endìcoder sia coerente con la direz di conteggio 
+'''
         if overall_sense > 0:
             self.rotation_start_new = self.rotation_start
         else:
-            self.rotation_start_new = self.rotation_start - (2 - self.readout_margin) * self.rotation_step
+            self.rotation_start_new = self.rotation_start - (2 - self.readout_margin) * self.rotation_step # impulsi che diminuiscono : encoder conta all’indietro mentre il motore va avanti
 
-        # Taxi come multiplo dello step
-        taxi_steps = math.ceil((accel_dist / abs(self.rotation_step)) + 0.5)
-        taxi_dist  = taxi_steps * abs(self.rotation_step)
+        # Taxi  : distanza necessaria all’accelerazione ->  numero intero di passi encoder
+        taxi_steps = math.ceil((accel_dist / abs(self.rotation_step)) + 0.5)                           # = quanti step effettivi servono distanza continua[deg], ceil arrotonda per eccesso  + mergine sicurezza 0.5
+        taxi_dist  = taxi_steps * abs(self.rotation_step)                                              # = la distanza reale di taxi[deg]= step_interi × step_angolare
 
         self.PSOStartTaxi = self.rotation_start_new - taxi_dist * user_direction
         self.rotation_stop_new = self.rotation_start_new + (self.num_angles - 1) * self.rotation_step
