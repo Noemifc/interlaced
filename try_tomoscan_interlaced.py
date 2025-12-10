@@ -61,17 +61,22 @@ class InterlacedScan:
 
         # Distanza angolare tra due proiezioni consecutive: lo spacing nominale tra gli angoli
         self.rotation_step = (rotation_stop - rotation_start) / (num_angles - 1)
-'''
-divide l'intervallo di scansione in N punti equidistanti: serve alla parte meccanica per stabilire la velocità motore, velocità taxi
- finestra PSO e conversione in impulsi 
- la cinematica del motore richiede comunque uno spacing nominale costante
-'''
+
+        self.theta_interlaced_timbir = []
+        self.PSOCountsIdeal          = []
+        self.PSOCountsTaxiCorrected  = []
+        self.PSOCountsFinal          = []
+    '''
+    divide l'intervallo di scansione in N punti equidistanti: serve alla parte meccanica per stabilire la velocità motore, velocità taxi
+     finestra PSO e conversione in impulsi 
+     la cinematica del motore richiede comunque uno spacing nominale costante
+    '''
     # ----------------------------------------------------------------------
     #  TomoScanPSO.compute_senses()
     # ----------------------------------------------------------------------
-'''Determina in che direzione il sistema encoder conterà gli impulsi durante la scansione: utile per PSO, taxi
-Bisogna capire il il verso finale del movimento perchè può muoversi in diverso senso
-'''
+    '''Determina in che direzione il sistema encoder conterà gli impulsi durante la scansione: utile per PSO, taxi
+    Bisogna capire il il verso finale del movimento perchè può muoversi in diverso senso
+    '''
     def compute_senses(self):
       
         encoder_dir = 1 if self.PSOCountsPerRotation > 0 else -1
@@ -82,25 +87,25 @@ Bisogna capire il il verso finale del movimento perchè può muoversi in diverso
     # ----------------------------------------------------------------------
     #  Tempo per Frame
     # ----------------------------------------------------------------------
-''' tempo totale richiesto dalla camera per acquisire una singola immagine, utile per calcolare la velocità di rotazione
-    Tempo totale per frame = esposizione + readout
-'''
+    ''' tempo totale richiesto dalla camera per acquisire una singola immagine, utile per calcolare la velocità di rotazione
+        Tempo totale per frame = esposizione + readout
+    '''
     def compute_frame_time(self):
      
         return self.exposure + self.readout
         
-''' nell exposure time il sensore vede il fascio, accumula fotoni e qui il 
-movimento del campione dovrebbe essere lento o costante per evitare blur
-+ readout dove la camera non può acquisire un nuovo frame
-'''
+    ''' nell exposure time il sensore vede il fascio, accumula fotoni e qui il 
+    movimento del campione dovrebbe essere lento o costante per evitare blur
+    + readout dove la camera non può acquisire un nuovo frame
+    '''
 
     # ----------------------------------------------------------------------
     #  compute_positions_PSO() come TomoScan
     # ----------------------------------------------------------------------
-'''  Come il motore si muove effettivamente  con   rotation_step in impulsi interi
+    '''  Come il motore si muove effettivamente  con   rotation_step in impulsi interi
 
-'''
-     def compute_positions_PSO(self):
+    '''
+    def compute_positions_PSO(self):
         
         overall_sense, user_direction = self.compute_senses()  # determinare in quale direzione si muovono gli impulsi encoder, se aumentano o diminuiscono  e +/- 1 da user
         encoder_multiply = self.PSOCountsPerRotation / 360.0   # fattore di coversione  da angoli ad impulsi (impulsi per grado)
@@ -119,18 +124,18 @@ movimento del campione dovrebbe essere lento o costante per evitare blur
         self.motor_speed = abs(self.rotation_step) / dt       # motor_speed = step_angolare / tempo_per_frame
 
         # Distanza necessaria per accelerare s = 1/2 * v * t
-         '''
+        '''
          v = motor_speed = velocità finale da raggiungere
          t = RotationAccelTime = tempo necessario per raggiungerla
          s = accel_dist = distanza angolare necessaria per accelerare
-         '''
+        '''
 
         accel_dist = 0.5 * self.motor_speed * self.RotationAccelTime  #  distanza angolare necessaria per accelerare
 
         # Rotazione di partenza corretta e interpretazione corretta per il PSO
-''' overall_sense > 0   =  impulsi encoder aumentano con la rotazione se < 0 è necessario nuovo offset
-    vedere da quale angolo reale far partire il motore affinchè il primo impulso endìcoder sia coerente con la direz di conteggio 
-'''
+        ''' overall_sense > 0   =  impulsi encoder aumentano con la rotazione se < 0 è necessario nuovo offset
+        vedere da quale angolo reale far partire il motore affinchè il primo impulso endìcoder sia coerente con la direz di conteggio 
+        '''
         if overall_sense > 0:
             self.rotation_start_new = self.rotation_start
         else:
@@ -148,8 +153,8 @@ movimento del campione dovrebbe essere lento o costante per evitare blur
         # Angoli "classici"
         self.theta_classic = self.rotation_start_new + np.arange(self.num_angles) * self.rotation_step # theta_classic = la lista di angoli equispaziati da acquisire
 
-''' non sono angoli timbir ma quelli equispaziati per acquisizione standard , usati per calcolare correttamente rotation_step , v motore e correzioni taxi 
-'''
+        ''' non sono angoli timbir ma quelli equispaziati per acquisizione standard , usati per calcolare correttamente rotation_step , v motore e correzioni taxi 
+        '''
 
     # ----------------------------------------------------------------------
     # TIMBIR — bit reverse
@@ -157,36 +162,36 @@ movimento del campione dovrebbe essere lento o costante per evitare blur
     def bit_reverse(self, n, bits):
         return int(f"{n:0{bits}b}"[::-1], 2)        # Converte n in binario su   bit lo inverte e lo riporta a intero
 
-# ----------------------------------------------------------------------
-#   Genera gli angoli TIMBIR interlacciati 
-# ----------------------------------------------------------------------
-def generate_interlaced_timbir_angles(self):
+    # ----------------------------------------------------------------------
+    #   Genera gli angoli TIMBIR interlacciati 
+    # ----------------------------------------------------------------------
+    def generate_interlaced_timbir_angles(self):
 
-    bits = int(np.log2(self.K_interlace))                         # bit necessari per rappresentare K_interlace
-    theta = []                                                    # lista temporanea angoli TIMBIR
+        bits = int(np.log2(self.K_interlace))                         # bit necessari per rappresentare K_interlace
+        theta = []                                                    # lista temporanea angoli TIMBIR
 
-    for n in range(self.num_angles):
-        group = (n * self.K_interlace // self.num_angles) % self.K_interlace      #  quale loop (0..K-1) contiene la proiezione n
-        group_br = self.bit_reverse(group, bits)                                  # bit-reversal al numero del loop
-        idx = n * self.K_interlace + group_br                                     #  TIMBIR interlacciato
-        angle_deg = (idx % self.num_angles) * 360.0 / self.num_angles             # conversione dell’indice in angolo  
-        theta.append(angle_deg)                                                   # aggiungi angolo alla lista
-    self.theta_interlaced_timbir = np.sort(theta)                                 # ordina angoli
+        for n in range(self.num_angles):
+            group = (n * self.K_interlace // self.num_angles) % self.K_interlace      #  quale loop (0..K-1) contiene la proiezione n
+            group_br = self.bit_reverse(group, bits)                                  # bit-reversal al numero del loop
+            idx = n * self.K_interlace + group_br                                     #  TIMBIR interlacciato
+            angle_deg = (idx % self.num_angles) * 360.0 / self.num_angles             # conversione dell’indice in angolo  
+            theta.append(angle_deg)                                                   # aggiungi angolo alla lista
+        self.theta_interlaced_timbir = np.sort(theta)                                 # ordina angoli
 
 
 
     # ----------------------------------------------------------------------
     # Modello  taxi
     # ----------------------------------------------------------------------
-'''
-omega_target = velocità angolare durante il tratto uniforme
-dt = passo temporale di simulazione
+    '''
+    omega_target = velocità angolare durante il tratto uniforme
+    dt = passo temporale di simulazione
 
-con 
-- accelerazione = parte da 0 e arriva a ω_target
-- regime = ruota a ω_target (velocità costante)
-- decelerazione = rallenta da ω_target a 0
-'''
+    con 
+    - accelerazione = parte da 0 e arriva a ω_target
+    - regime = ruota a ω_target (velocità costante)
+    - decelerazione = rallenta da ω_target a 0
+    '''
     def simulate_taxi_motion(self, omega_target=10, dt=1e-4):
        # accelerazione e decelerazione
         accel = decel = omega_target / self.RotationAccelTime
@@ -208,25 +213,25 @@ con
         theta_dec = theta_flat[-1] + omega_target*t_dec - 0.5*decel*t_dec**2
 
         self.t_vec = np.concatenate([t_acc, t_acc[-1] + t_flat,
-                                     t_acc[-1] + t_flat[-1] + t_dec])                  # t_vec = vettore del tempo continuo da 0 fino alla fine del moto
+                                     t_acc[-1] + t_flat[-1] + t_dec])                   # t_vec = vettore del tempo continuo da 0 fino alla fine del moto
         self.theta_vec = np.concatenate([theta_acc, theta_flat, theta_dec])             # theta_vec =  angoli reali generati dal modello cinematico
         
-''' Shift:
-- accelerazione = finisce a t_acc[-1]
-- flat = deve iniziare esattamente dopo
-- decelerazione = deve iniziare esattamente alla fine del regime
-'''
-    
+    ''' Shift:
+    - accelerazione = finisce a t_acc[-1]
+    - flat = deve iniziare esattamente dopo
+    - decelerazione = deve iniziare esattamente alla fine del regime
+    '''
+        
     # ----------------------------------------------------------------------
-     # tempo reale a cui il motore raggiunge ogni angolo TIMBIR
+    # tempo reale a cui il motore raggiunge ogni angolo TIMBIR
     # ----------------------------------------------------------------------
-''' angoli TIMBIR = tempi reali
-    tempi reali = angoli reali
-'''
+    ''' angoli TIMBIR = tempi reali
+        tempi reali = angoli reali
+    '''
     def compute_real_motion(self):
         
-        self.t_real = np.interp(self.theta_interlaced, self.theta_vec, self.t_vec)    # tempo reale a cui il motore raggiunge ogni angolo TIMBIR
-        self.theta_real = np.interp(self.t_real, self.t_vec, self.theta_vec)          # angolo effettivamente raggiunto dal motore in quel momento
+        self.t_real = np.interp(self.theta_interlaced_timbir, self.theta_vec, self.t_vec)    # tempo reale a cui il motore raggiunge ogni angolo TIMBIR
+        self.theta_real = np.interp(self.t_real, self.t_vec, self.theta_vec)                 # angolo effettivamente raggiunto dal motore in quel momento
     
     # ----------------------------------------------------------------------
     # Converte angoli = impulsi PSO assoluti
@@ -234,21 +239,21 @@ con
     def convert_angles_to_counts(self):
       
         pulses_per_degree = self.PSOCountsPerRotation / 360.0
-        self.PSOCountsIdeal = np.round(self.theta_interlaced * pulses_per_degree).astype(int)    # conversione degli angoli TIMBIR ideali in impulsi ideali
-        self.PSOCountsTaxiCorrected = np.round(self.theta_real * pulses_per_degree).astype(int)  # converte angoli reali ( quelli corretti da taxi) in impulsi encoder assoluti
+        self.PSOCountsIdeal = np.round(self.theta_interlaced_timbir * pulses_per_degree).astype(int)    # conversione degli angoli TIMBIR ideali in impulsi ideali
+        self.PSOCountsTaxiCorrected = np.round(self.theta_real * pulses_per_degree).astype(int)         # converte angoli reali ( quelli corretti da taxi) in impulsi encoder assoluti
       
         self.PSOCountsFinal = self.PSOCountsTaxiCorrected.copy()         # copia gli impulsi taxi-corretti nel vettore finale da inviare alla FPGA
 
- '''impulsi che voglio inviare se il motore si muovesse perfettamente senza accelerazioni e ritardi''''
+    '''impulsi che voglio inviare se il motore si muovesse perfettamente senza accelerazioni e ritardi'''
 
     # ----------------------------------------------------------------------
     # Grafico
     # ----------------------------------------------------------------------
     def plot_diagnostics(self):
         plt.figure(figsize=(12,6))
-        plt.plot(self.theta_interlaced, self.PSOCountsIdeal, 'o-', label="Impulsi ideali")
-        plt.plot(self.theta_interlaced, self.PSOCountsTaxiCorrected, 'o-', label="Impulsi taxi-corretti")
-        plt.plot(self.theta_interlaced, self.PSOCountsFinal, 'o-', label="Impulsi finali FPGA", linewidth=3, alpha=0.7)
+        plt.plot(self.theta_interlaced_timbir, self.PSOCountsIdeal, 'o-', label="Impulsi ideali")
+        plt.plot(self.theta_interlaced_timbir, self.PSOCountsTaxiCorrected, 'o-', label="Impulsi taxi-corretti")
+        plt.plot(self.theta_interlaced_timbir, self.PSOCountsFinal, 'o-', label="Impulsi finali FPGA", linewidth=3, alpha=0.7)
 
         plt.xlabel("Angolo interlacciato (deg)")
         plt.ylabel("Impulsi PSO (assoluti)")
@@ -258,7 +263,10 @@ con
         plt.tight_layout()
         plt.show()
 
-
+    def show_list(self):
+        print(self.PSOCountsIdeal)
+        print(self.PSOCountsTaxiCorrected)
+        print(self.PSOCountsFinal)
 # ============================================================================
 #                     ESEMPIO COMPLETO
 # ============================================================================
@@ -268,10 +276,12 @@ if __name__ == "__main__":
     scan = InterlacedScan(num_angles=32, K_interlace=4)
 
     scan.compute_positions_PSO()
-    scan.generate_interlaced_angles()
+    # scan.generate_interlaced_angles()
+    scan.generate_interlaced_timbir_angles()
     scan.simulate_taxi_motion()
     scan.compute_real_motion()
     scan.convert_angles_to_counts()
 
     scan.plot_diagnostics()
-    scan.save_pulses_bin("pulses.bin")
+    scan.show_list()
+    # scan.save_pulses_bin("pulses.bin")
