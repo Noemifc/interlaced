@@ -237,7 +237,18 @@ class InterlacedScan:
         self.PSOCountsIdeal = np.round(self.theta_interlaced * pulses_per_degree).astype(int)      # conversione degli angoli TIMBIR ideali in impulsi ideali
         self.PSOCountsTaxiCorrected = np.round(self.theta_real * pulses_per_degree).astype(int)    # converte angoli reali ( quelli corretti da taxi) in impulsi encoder assoluti
         self.PSOCountsFinal = self.PSOCountsTaxiCorrected.copy()                                   # copia gli impulsi taxi-corretti nel vettore finale da inviare alla FPGA
+        # 1) Closest integer pulse number
+        pulse_counts = np.round(self.theta_interlaced / 360.0 * self.PSOCountsPerRotation).astype(int)
 
+        # 2) Actual angle of those pulses
+        actual_angles = pulse_counts / pulses_per_degree
+
+        # 3) Angular error (actual - desired)
+        angular_error = actual_angles - self.theta_interlaced
+
+        # Print results nicely
+        for a, p, act, err in zip(self.theta_interlaced, pulse_counts, actual_angles, angular_error):
+            print(f"Target: {a:8.2f} deg | Pulse: {p:6d} | Actual: {act:9.6f} deg | Error: {err:+.6f} deg")    
             # '''impulsi che voglio inviare se il motore si muovesse perfettamente senza accelerazioni e ritardi''''
 
     # ----------------------------------------------------------------------
