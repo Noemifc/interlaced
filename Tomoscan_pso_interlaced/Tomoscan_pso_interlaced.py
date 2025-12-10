@@ -235,7 +235,8 @@ class InterlacedScan:
         pulses_per_degree = self.PSOCountsPerRotation / 360.0
 
         self.PSOCountsIdeal = np.round(self.theta_interlaced * pulses_per_degree).astype(int)
-        self.PSOCountsTaxiCorrected = np.round(self.theta_real * pulses_per_degree).astype(int)
+        # self.PSOCountsTaxiCorrected = np.round(self.theta_real * pulses_per_degree).astype(int)
+        self.PSOCountsTaxiCorrected = self.theta_real * pulses_per_degree
 
         self.PSOCountsFinal = self.PSOCountsTaxiCorrected.copy()
 
@@ -340,7 +341,7 @@ class InterlacedScan:
 # ============================================================================
 if __name__ == "__main__":
 
-    scan = InterlacedScan(num_angles=32, K_interlace=4, PSOCountsPerRotation=20000)
+    scan = InterlacedScan(num_angles=32, K_interlace=4, PSOCountsPerRotation=20)
 
     scan.compute_positions_PSO()
     scan.generate_interlaced_angles()
