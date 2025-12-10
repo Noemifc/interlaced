@@ -24,7 +24,7 @@ class InterlacedScan:
                  rotation_start=0.0,
                  rotation_stop=360.0,
                  num_angles=32,
-                 PSOCountsPerRotation=20,
+                 PSOCountsPerRotation=20000,
                  RotationDirection=0,
                  RotationAccelTime=0.15,
                  exposure=0.01,
@@ -163,6 +163,7 @@ class InterlacedScan:
             group_indices.append(group)
 
         self.theta_interlaced = np.sort(theta)
+        self.theta_interlaced_unwrapped = np.rad2deg(np.unwrap(np.deg2rad(theta)))
 
         # Added plot to verify TIMBIR angle locations
         group_indices = np.array(group_indices)
@@ -256,7 +257,24 @@ class InterlacedScan:
 
         # Print results nicely
         for a, p, act, err in zip(self.theta_interlaced, pulse_counts, actual_angles, angular_error):
-            print(f"Target: {a:8.2f} deg | Pulse: {p:6d} | Actual: {act:9.6f} deg | Error: {err:+.6f} deg")   
+            print(f"Target: {a:8.2f} deg | Pulse: {p:6d} | Actual: {act:9.6f} deg | Error: {err:+.6f} deg")  
+
+        print('********************* unwrapped angles *********************')
+        # same for unwrapped angles
+        # 1) Closest integer pulse number
+        pulse_counts = np.round(self.theta_interlaced_unwrapped / 360.0 * self.PSOCountsPerRotation).astype(int)
+
+        # 2) Actual angle of those pulses (these are the one we want to save with the projections in the hdf file)
+        actual_angles = pulse_counts / pulses_per_degree
+
+        # 3) Angular error (actual - desired)
+        angular_error = actual_angles - self.theta_interlaced_unwrapped
+
+        # Print results nicely
+        for a, p, act, err in zip(self.theta_interlaced_unwrapped, pulse_counts, actual_angles, angular_error):
+            print(f"Target: {a:8.2f} deg | Pulse: {p:6d} | Actual: {act:9.6f} deg | Error: {err:+.6f} deg")  
+
+ 
     # ----------------------------------------------------------------------
     # Plot comparativi
     # ----------------------------------------------------------------------
@@ -294,7 +312,7 @@ class InterlacedScan:
 # ============================================================================
 if __name__ == "__main__":
 
-    scan = InterlacedScan(num_angles=32, K_interlace=4)
+    scan = InterlacedScan(num_angles=32, K_interlace=1, PSOCountsPerRotation=200)
 
     scan.compute_positions_PSO()
     scan.generate_interlaced_angles()
