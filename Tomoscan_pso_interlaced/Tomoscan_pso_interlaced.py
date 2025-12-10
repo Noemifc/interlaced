@@ -134,9 +134,9 @@ class InterlacedScan:
 
         # Angoli classici
         self.theta_classic = self.rotation_start_new + np.arange(self.num_angles) * self.rotation_step  # theta_classic = la lista di angoli equispaziati da acquisire
-           ''' non sono angoli timbir ma quelli equispaziati per acquisizione standard 
-           usati per calcolare correttamente rotation_step , v motore e correzioni taxi 
-           '''
+           # ''' non sono angoli timbir ma quelli equispaziati per acquisizione standard 
+           # usati per calcolare correttamente rotation_step , v motore e correzioni taxi 
+           # '''
 
     # ----------------------------------------------------------------------
     # TIMBIR — bit reverse
@@ -164,13 +164,13 @@ class InterlacedScan:
     # Modello taxi
     # ----------------------------------------------------------------------
     def simulate_taxi_motion(self, omega_target=10, dt=1e-4):
-      ''' omega_target = velocità angolare durante il tratto uniforme
-          dt = passo temporale di simulazione
-          con 
-            - accelerazione = parte da 0 e arriva a ω_target
-            - regime = ruota a ω_target (velocità costante)
-            - decelerazione = rallenta da ω_target a 0
-       '''
+      # ''' omega_target = velocità angolare durante il tratto uniforme
+      #     dt = passo temporale di simulazione
+      #     con 
+      #       - accelerazione = parte da 0 e arriva a ω_target
+      #       - regime = ruota a ω_target (velocità costante)
+      #       - decelerazione = rallenta da ω_target a 0
+      #  '''
 
         accel = decel = omega_target / self.RotationAccelTime
 
@@ -192,18 +192,18 @@ class InterlacedScan:
         self.t_vec = np.concatenate([t_acc, t_acc[-1] + t_flat, t_acc[-1] + t_flat[-1] + t_dec])  # t_vec = vettore del tempo continuo da 0 fino alla fine del moto
         self.theta_vec = np.concatenate([theta_acc, theta_flat, theta_dec])                       # theta_vec =  angoli reali generati dal modello cinematico
 
-         ''' Shift:
-                - accelerazione = finisce a t_acc[-1]
-                - flat = deve iniziare esattamente dopo
-                - decelerazione = deve iniziare esattamente alla fine del regime
-         '''
+         # ''' Shift:
+         #        - accelerazione = finisce a t_acc[-1]
+         #        - flat = deve iniziare esattamente dopo
+         #        - decelerazione = deve iniziare esattamente alla fine del regime
+         # '''
 
     # ----------------------------------------------------------------------
     # tempo reale dell’angolo TIMBIR
     # ----------------------------------------------------------------------
-       ''' angoli TIMBIR = tempi reali
-           tempi reali = angoli reali
-       '''
+       # ''' angoli TIMBIR = tempi reali
+       #     tempi reali = angoli reali
+       # '''
     def compute_real_motion(self):
         self.t_real = np.interp(self.theta_interlaced, self.theta_vec, self.t_vec)    # tempo reale a cui il motore raggiunge ogni angolo TIMBIR
         self.theta_real = np.interp(self.t_real, self.t_vec, self.theta_vec)          # angolo effettivamente raggiunto dal motore in quel momento
@@ -218,7 +218,7 @@ class InterlacedScan:
         self.PSOCountsTaxiCorrected = np.round(self.theta_real * pulses_per_degree).astype(int)    # converte angoli reali ( quelli corretti da taxi) in impulsi encoder assoluti
         self.PSOCountsFinal = self.PSOCountsTaxiCorrected.copy()                                   # copia gli impulsi taxi-corretti nel vettore finale da inviare alla FPGA
 
-            '''impulsi che voglio inviare se il motore si muovesse perfettamente senza accelerazioni e ritardi''''
+            # '''impulsi che voglio inviare se il motore si muovesse perfettamente senza accelerazioni e ritardi''''
 
     # ----------------------------------------------------------------------
     # Grafico 
