@@ -150,15 +150,35 @@ class InterlacedScan:
     def generate_interlaced_timbir_angles(self): 
         bits = int(np.log2(self.K_interlace))                        # bit necessari per rappresentare K_interlace         
         theta = []                                                   # lista temporanea angoli TIMBIR
-
+        group_indices = []
+        
         for n in range(self.num_angles):
             group = (n * self.K_interlace // self.num_angles) % self.K_interlace     #  quale loop (0..K-1) contiene la proiezione n
             group_br = self.bit_reverse(group, bits)                                 # bit-reversal al numero del loop
             idx = n * self.K_interlace + group_br                                    #  TIMBIR interlacciato
             angle_deg = (idx % self.num_angles) * 360.0 / self.num_angles            # conversione dell’indice in angolo  
             theta.append(angle_deg)                                                  # aggiungi angolo alla lista
+            group_indices.append(group)
 
         self.theta_interlaced = np.sort(theta)                                       # ordina angoli
+
+        # Added plot to verify TIMBIR angles
+        group_indices = np.array(group_indices)
+        radii = 1 - group_indices * 0.15
+        # Plot acquisition sequence
+        fig = plt.figure(figsize=(7, 7))
+        ax = fig.add_subplot(111, polar=True)
+        ax.set_title(f"TIMBIR Interlaced Acquisition (N={self.num_angles} - K={self.K_interlace })\nEach loop on its own circle",
+                     va='bottom', fontsize=13)
+
+        ax.plot(np.deg2rad(theta), radii, '-o', lw=1.2, ms=5, alpha=0.8, color='tab:blue')
+
+        for i in range(self.num_angles):
+            ax.text(theta[i], radii[i] + 0.03,
+                    str(group_indices[i] + 1), ha='center', va='bottom', fontsize=8)
+
+        ax.set_rticks([])
+        plt.show()
 
     # ----------------------------------------------------------------------
     # Modello taxi
