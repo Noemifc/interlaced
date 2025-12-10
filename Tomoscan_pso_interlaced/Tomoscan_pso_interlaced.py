@@ -221,7 +221,22 @@ class InterlacedScan:
         '''
         impulsi ideali se il motore fosse perfetto
         '''
+        # ----------------------------------------------------------------------
+        # Error between the angle in floating point and the angle rounded to the 
+        # closest encoder pulse
+        # ----------------------------------------------------------------------
+        # 1) Closest integer pulse number
+        pulse_counts = np.round(self.theta_interlaced / 360.0 * self.PSOCountsPerRotation).astype(int)
 
+        # 2) Actual angle of those pulses (these are the one we want to save with the projections in the hdf file)
+        actual_angles = pulse_counts / pulses_per_degree
+
+        # 3) Angular error (actual - desired)
+        angular_error = actual_angles - self.theta_interlaced
+
+        # Print results nicely
+        for a, p, act, err in zip(self.theta_interlaced, pulse_counts, actual_angles, angular_error):
+            print(f"Target: {a:8.2f} deg | Pulse: {p:6d} | Actual: {act:9.6f} deg | Error: {err:+.6f} deg")   
     # ----------------------------------------------------------------------
     # Plot comparativi
     # ----------------------------------------------------------------------
