@@ -307,6 +307,34 @@ class InterlacedScan:
         plt.tight_layout()
         plt.show()
 
+# plot
+    def plot(self):
+        x1 = self.theta_interlaced
+        x2 = self.theta_interlaced_unwrapped
+        pulse_counts = np.round(self.theta_interlaced_unwrapped / 360.0 * self.PSOCountsPerRotation).astype(int)
+        y = pulse_counts
+
+        fig, axs = plt.subplots(2, 1, figsize=(10, 8), sharey=True)
+
+        # Plot 1: angoli interlacciati
+        axs[0].plot(x1, y, 'o-', color='tab:blue', label='Impulsi vs Angolo')
+        axs[0].set_title('Angoli TIMBIR vs Impulsi encoder')
+        axs[0].set_xlabel('Angolo interlacciato [deg]')
+        axs[0].set_ylabel('Impulsi encoder')
+        axs[0].grid(True)
+        axs[0].legend()
+
+        # Plot 2: angoli unwrapped
+        axs[1].plot(x2, y, 's-', color='tab:orange', label='Impulsi vs Angolo Unwrapped')
+        axs[1].set_title('Angoli TIMBIR Unwrapped vs Impulsi encoder')
+        axs[1].set_xlabel('Angolo interlacciato Unwrapped [deg]')
+        axs[1].set_ylabel('Impulsi encoder')
+        axs[1].grid(True)
+        axs[1].legend()
+
+        plt.tight_layout()
+        plt.show()
+
 
 # ============================================================================
 # ============================================================================
@@ -321,3 +349,4 @@ if __name__ == "__main__":
     scan.convert_angles_to_counts()
 
     scan.plot_all_comparisons()
+    scan.plot()
