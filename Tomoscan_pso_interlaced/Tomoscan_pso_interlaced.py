@@ -312,7 +312,7 @@ class InterlacedScan:
 # ============================================================================
 if __name__ == "__main__":
 
-    scan = InterlacedScan(num_angles=32, K_interlace=1, PSOCountsPerRotation=200)
+    scan = InterlacedScan(num_angles=32, K_interlace=4, PSOCountsPerRotation=20000)
 
     scan.compute_positions_PSO()
     scan.generate_interlaced_angles()
