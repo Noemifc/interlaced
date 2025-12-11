@@ -10,7 +10,7 @@ golden_a = (3 - np.sqrt(5)) / 2  # ≈ 111.246°
 
 # altro metodo fibo_offests= k/viste * golden_a
 
-
+# verificare se il metodo loop offset sia adatto 
 
 # genero angoli interlacciati con offset Fibonacci
 
@@ -58,5 +58,6 @@ plt.grid(True)
 plt.legend()
 plt.tight_layout()
 plt.show()
+
 
 
