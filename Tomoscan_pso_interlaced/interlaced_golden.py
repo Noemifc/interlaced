@@ -4,7 +4,7 @@ stamap tab angoli semplici e cumulativi per loop
 coverte angoli in pulses
 grafici su base Timbir
 
-fibonacci_offset= [( k loop / (numero totale di angoli da generare in ogni ciclo +1 ) ] * 360 * 1.618
+fibonacci_offset= [( k loop / (numero totale di angoli da generare in ogni ciclo +1 ) ] * 360 * 0.618
 
 l'offset basato sulla sequenza di Fibonacci viene aggiunto agli angoli del loop precedente
 creando una nuova serie di angoli distribuiti uniformemente
@@ -173,3 +173,4 @@ plot_interlaced_circles(angles_list)
 plot_angles_vs_pulses(angles_list, pulses_list, title="Original Angles vs Pulses")
 plot_angles_vs_pulses(cumulative_loops, pulses_cumulative, title="Cumulative Angles vs Pulses")
 plot_combined_cumulative(cumulative_loops, pulses_cumulative)
+
