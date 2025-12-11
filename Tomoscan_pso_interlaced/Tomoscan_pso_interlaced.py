@@ -49,7 +49,7 @@ class InterlacedScan:
     # ----------------------------------------------------------------------
     #   TIMBIR
     # ----------------------------------------------------------------------
-    def generate_interlaced_timbir(self):  # Rinominato qui
+    def generate_interlaced_timbir(self):
 
         bits = int(np.log2(self.K_interlace))
         theta = []
