@@ -21,17 +21,20 @@ def generate_interlaced_angles(rotation_start, num_angles, K_interlace):
     angles_all = []
 
     # 1 k angoli senza offset (Golden Angle)
-    angles = np.zeros(num_angles)
+      '''
+    metodo : tethai= tetha0= n volte *ingremento angolare , ripotato nel range 360
+    '''
+    angles = np.zeros(num_angles)    
     for i in range(num_angles):
-        angles[i] = (rotation_start + i * golden_angle) % 360
+        angles[i] = (rotation_start + i * golden_angle) % 360     
     angles_all.append(np.sort(angles))
 
     # n k  con offset Fibonacci
-    for k in range(1, K_interlace):
-        fib_offset = (np.round((k / (num_angles + 1)) * 360 * golden_ratio, 5)) % 360
-        new_angles = (angles_all[0] + fib_offset) % 360  # + l'offset Fibonacci
+      for k in range(1, K_interlace):
+        fib_offset = (np.round((k / (num_angles + 1)) * 360 * golden_ratio, 5)) % 360   # i x angolo aureo = riempimento unif 
+        new_angles = (angles_all[0] + fib_offset) % 360  # + l'offset Fibonacci  
         angles_all.append(np.sort(new_angles))
-
+        
     return angles_all
 
 #  angoli interlacciati
@@ -60,6 +63,7 @@ plt.grid(True)
 plt.legend()
 plt.tight_layout()
 plt.show()
+
 
 
 
