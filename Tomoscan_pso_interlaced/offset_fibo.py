@@ -6,7 +6,7 @@ num_angles = 32  # n di angoli per ciclo
 K_interlace = 4  # loops
 golden_ratio = (np.sqrt(5) - 1) / 2  # 0.618
 rotation_start = 0  # start
-golden_a = (3 - np.sqrt(5)) / 2  # ≈ 111.246°
+
 
 # altro metodo fibo_offests= k/viste * golden_a ? 
 
@@ -16,6 +16,8 @@ golden_a = (3 - np.sqrt(5)) / 2  # ≈ 111.246°
 
 def generate_interlaced_angles(rotation_start, num_angles, K_interlace):
     golden_angle = 360 * golden_ratio  # Golden Angle = 137.5°
+  # golden_a = (3 - np.sqrt(5)) / 2  # ≈ 111.246°    oppure questo?
+    
     angles_all = []
 
     # 1 k angoli senza offset (Golden Angle)
@@ -58,6 +60,7 @@ plt.grid(True)
 plt.legend()
 plt.tight_layout()
 plt.show()
+
 
 
 
