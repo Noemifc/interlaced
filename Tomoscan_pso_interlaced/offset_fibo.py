@@ -8,7 +8,7 @@ golden_ratio = (np.sqrt(5) - 1) / 2  # 0.618
 rotation_start = 0  # start
 golden_a = (3 - np.sqrt(5)) / 2  # ≈ 111.246°
 
-# altro metodo fibo_offests= k/viste * golden_a
+# altro metodo fibo_offests= k/viste * golden_a ? 
 
 # verificare se il metodo loop offset sia adatto 
 
@@ -58,6 +58,7 @@ plt.grid(True)
 plt.legend()
 plt.tight_layout()
 plt.show()
+
 
 
 
