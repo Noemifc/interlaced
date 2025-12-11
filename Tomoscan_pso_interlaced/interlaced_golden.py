@@ -13,7 +13,7 @@ creando una nuova serie di angoli distribuiti uniformemente
 import numpy as np
 import matplotlib.pyplot as plt
 
-PSOCountsPerRotation = 20000  # numero di impulsi per rotaz completa
+PSOCountsPerRotation = 200  # numero di impulsi per rotaz completa
 # -----------------------------------
 # angoli interlacciati
 # -----------------------------------
@@ -173,4 +173,5 @@ plot_interlaced_circles(angles_list)
 plot_angles_vs_pulses(angles_list, pulses_list, title="Original Angles vs Pulses")
 plot_angles_vs_pulses(cumulative_loops, pulses_cumulative, title="Cumulative Angles vs Pulses")
 plot_combined_cumulative(cumulative_loops, pulses_cumulative)
+
 
