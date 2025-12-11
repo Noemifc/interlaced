@@ -2,16 +2,14 @@ import numpy as np
 import math
 import matplotlib.pyplot as plt
 
-
-# ============================================================================
+# ============================================================================#
 #                     CLASSE INTERLACED SCAN
-# ============================================================================
+# ============================================================================#
 
 class InterlacedScan:
-   
-    # ----------------------------------------------------------------------
+    # ---------------------------------------------------------------------- #
     # init e parametri
-    # ----------------------------------------------------------------------
+    # ---------------------------------------------------------------------- #
     def __init__(self,
                  rotation_start=0.0,
                  rotation_stop=360.0,
@@ -23,12 +21,12 @@ class InterlacedScan:
                  readout=0.01,
                  readout_margin=1,
                  K_interlace=4):
-
+        
         # Parametri di scansione
         self.rotation_start = rotation_start  # angolo iniziale della scansione
         self.rotation_stop = rotation_stop  # angolo finale della scansione
         self.num_angles = num_angles  # num proiezioni
-        self.K_interlace = K_interlace  # nuovo pv
+        self.K_interlace = K_interlace  # interlacciamento
 
         # Parametri hardware
         self.PSOCountsPerRotation = PSOCountsPerRotation
@@ -47,7 +45,6 @@ class InterlacedScan:
     # METHOD
     ################################################################################ 
 
-    
     def select_interlacing_method(self, method_name="Timbir"):
         """
         Seleziona il metodo di interlacciamento e genera gli angoli interlaced_metodo
@@ -59,18 +56,17 @@ class InterlacedScan:
 
         if method_name in interlacing_methods:
             print(f"Select method : {method_name}")
-            interlacing_methods[method_name]()  # chiama metodo 
+            interlacing_methods[method_name]()  # Chiama il metodo selezionato
         else:
             print(f"Method '{method_name}' not found!")
 
-    #############################################################################################################################################################
-    #                                                       METHODS
-    #############################################################################################################################################################
-    # --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-    # TIMBIR
-    # --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-    def generate_interlaced_timbir(self):
+    ##################################################################################################
+    #               METODI DI INTERLACCIAMENTO
+    ##################################################################################################
 
+   # TIMBIR
+
+    def generate_interlaced_timbir(self):
         bits = int(np.log2(self.K_interlace))
         theta = []
         group_indices = []
@@ -83,168 +79,45 @@ class InterlacedScan:
             theta.append(angle_deg)
             group_indices.append(group)
 
-        # modifica da implementare in tutti i metodi :
+        # Salva l'angolo interlacciato generato valido per ogni metodo da aggiungere
         self.theta_interlaced = np.sort(theta)
         self.theta_interlaced_unwrapped = np.rad2deg(np.unwrap(np.deg2rad(theta)))
-
-        # Added plot to verify TIMBIR angle locations
-        group_indices = np.array(group_indices)
-        radii = 1 - group_indices * 0.15
-        # Plot acquisition sequence
-        fig = plt.figure(figsize=(7, 7))
-        ax = fig.add_subplot(111, polar=True)
-        ax.set_title(
-            f"TIMBIR Interlaced Acquisition (N={self.num_angles} - K={self.K_interlace})\nEach loop on its own circle",
-            va='bottom', fontsize=13)
-
-        ax.plot(np.deg2rad(theta), radii, '-o', lw=1.2, ms=5, alpha=0.8, color='tab:blue')
-
-        for i in range(self.num_angles):
-            ax.text(np.deg2rad(theta[i]), radii[i] + 0.03,
-                    str(group_indices[i] + 1), ha='center', va='bottom', fontsize=8)
-
-        ax.set_rticks([])
-        plt.show()
 
     def bit_reverse(self, n, bits):
         """Funzione per il reverse dei bit"""
         return int(f"{n:0{bits}b}"[::-1], 2)
 
-    # --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-    #                 GOLDEN ANGLE
-    # --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    # GoLDEN ANGLE
 
-    #############################################################################################################################################################
-    #                                                       FUNCTION PSO
-    #############################################################################################################################################################
+    def generate_interlaced_goldenangle(self):
+        golden_angle = 360 * (3 - math.sqrt(5)) / 2  # Golden Angle
+        theta = [(i * golden_angle) % 360 for i in range(self.num_angles)]
+        
+        # Salva l'angolo interlacciato generato valido per ogni metodo da aggiungere
+        self.theta_interlaced = np.sort(theta)
+        self.theta_interlaced_unwrapped = np.rad2deg(np.unwrap(np.deg2rad(theta)))
 
-    # ----------------------------------------------------------------------
-    #  TomoScanPSO.compute_senses()
-    # ----------------------------------------------------------------------
-  
-    def compute_senses(self):
+   
 
-        encoder_dir = 1 if self.PSOCountsPerRotation > 0 else -1
-        motor_dir = 1 if self.RotationDirection == 0 else -1
-        user_dir = 1 if self.rotation_stop > self.rotation_start else -1
-        return encoder_dir * motor_dir * user_dir, user_dir
+    ##################################################################################################
+    #               FUNZIONI DI CALCOLO E PLOT
+    ##################################################################################################
 
-    # ----------------------------------------------------------------------
-    #  Tempo per Frame
-    # ----------------------------------------------------------------------
-        def compute_frame_time(self):
-        return self.exposure + self.readout
-            
-    # ----------------------------------------------------------------------
-    #  compute_positions_PSO()
-    # ----------------------------------------------------------------------
-    
-    def compute_positions_PSO(self):
-
-        overall_sense, user_direction = self.compute_senses()
-        encoder_multiply = self.PSOCountsPerRotation / 360.0
-
-        # Correzione step -> impulsi interi
-        raw_counts = self.rotation_step * encoder_multiply
-        delta_counts = round(raw_counts)
-        self.rotation_step = delta_counts / encoder_multiply
-
-        # Velocità motore
-        dt = self.compute_frame_time()
-        self.motor_speed = abs(self.rotation_step) / dt
-
-        accel_dist = 0.5 * self.motor_speed * self.RotationAccelTime
-
-        if overall_sense > 0:
-            self.rotation_start_new = self.rotation_start
-        else:
-            self.rotation_start_new = self.rotation_start - (2 - self.readout_margin) * self.rotation_step
-
-        # Taxi
-        taxi_steps = math.ceil((accel_dist / abs(self.rotation_step)) + 0.5)
-        taxi_dist = taxi_steps * abs(self.rotation_step)
-
-        # Flyscan logic
-        self.PSOStartTaxi = self.rotation_start_new - taxi_dist * user_direction
-        self.rotation_stop_new = self.rotation_start_new + (self.num_angles - 1) * self.rotation_step
-        self.PSOEndTaxi = self.rotation_stop_new + taxi_dist * user_direction
-
-        # Angoli classici equispaziati
-        self.theta_classic = self.rotation_start_new + np.arange(self.num_angles) * self.rotation_step
-
-    # ----------------------------------------------------------------------
-    # Modello taxi
-    # ----------------------------------------------------------------------
-    
-    def simulate_taxi_motion(self, omega_target=10, dt=1e-4):
-
-        accel = decel = omega_target / self.RotationAccelTime
-
-        # Accelerazione
-        T_acc = omega_target / accel
-        t_acc = np.arange(0, T_acc, dt)
-        theta_acc = 0.5 * accel * t_acc ** 2
-
-        # Tratto uniforme
-        theta_flat_len = 360 - 2 * theta_acc[-1]
-        T_flat = theta_flat_len / omega_target
-        t_flat = np.arange(0, T_flat, dt)
-        theta_flat = theta_acc[-1] + omega_target * t_flat
-
-        # Decelerazione
-        T_dec = omega_target / decel
-        t_dec = np.arange(0, T_dec, dt)
-        theta_dec = theta_flat[-1] + omega_target * t_dec - 0.5 * decel * t_dec ** 2
-
-        # Concatenate
-        self.t_vec = np.concatenate([t_acc,
-                                     t_acc[-1] + t_flat,
-                                     t_acc[-1] + t_flat[-1] + t_dec])
-
-        self.theta_vec = np.concatenate([theta_acc, theta_flat, theta_dec])
-
-    # ----------------------------------------------------------------------
-    # tempi reali = angoli interlacciati
-    # ----------------------------------------------------------------------
-    '''
-    Interpola gli angoli  relativi al metodo scelto sul moto reale simulato
-    '''
+   
     def compute_real_motion(self):
+        
         self.t_real = np.interp(self.theta_interlaced, self.theta_vec, self.t_vec)
         self.theta_real = np.interp(self.t_real, self.t_vec, self.theta_vec)
 
-    # ----------------------------------------------------------------------
-    # Converte angoli = impulsi
-    # ----------------------------------------------------------------------
     def convert_angles_to_counts(self):
-
+     
         pulses_per_degree = self.PSOCountsPerRotation / 360.0
-
         self.PSOCountsIdeal = np.round(self.theta_interlaced * pulses_per_degree).astype(int)
         self.PSOCountsTaxiCorrected = self.theta_real * pulses_per_degree
         self.PSOCountsFinal = self.PSOCountsTaxiCorrected.copy()
 
-        # impulsi ideali se il motore fosse perfetto
-        pulse_counts = np.round(self.theta_interlaced / 360.0 * self.PSOCountsPerRotation).astype(int)
-        actual_angles = pulse_counts / pulses_per_degree
-        angular_error = actual_angles - self.theta_interlaced
-
-        for a, p, act, err in zip(self.theta_interlaced, pulse_counts, actual_angles, angular_error):
-            print(f"Target: {a:8.2f} deg | Pulse: {p:6d} | Actual: {act:9.6f} deg | Error: {err:+.6f} deg")
-
-        print('********************* unwrapped angles *********************')
-        pulse_counts = np.round(self.theta_interlaced_unwrapped / 360.0 * self.PSOCountsPerRotation).astype(int)
-        actual_angles = pulse_counts / pulses_per_degree
-        angular_error = actual_angles - self.theta_interlaced_unwrapped
-
-        for a, p, act, err in zip(self.theta_interlaced_unwrapped, pulse_counts, actual_angles, angular_error):
-            print(f"Target: {a:8.2f} deg | Pulse: {p:6d} | Actual: {act:9.6f} deg | Error: {err:+.6f} deg")
-
-    # ----------------------------------------------------------------------
-    # Plot comparativi
-    # ----------------------------------------------------------------------
     def plot_all_comparisons(self):
-
+      
         ideal = self.PSOCountsIdeal
         real = self.PSOCountsTaxiCorrected
         final = self.PSOCountsFinal
@@ -272,8 +145,8 @@ class InterlacedScan:
         plt.tight_layout()
         plt.show()
 
-    # plot
     def plot(self):
+        """Grafico finale"""
         x1 = self.theta_interlaced
         x2 = self.theta_interlaced_unwrapped
         pulse_counts = np.round(self.theta_interlaced_unwrapped / 360.0 * self.PSOCountsPerRotation).astype(int)
@@ -301,16 +174,19 @@ class InterlacedScan:
         plt.show()
 
 
-# ============================================================================
+# ============================================================================#
 
 if __name__ == "__main__":
-    scan = InterlacedScan(num_angles=32, K_interlace=4, PSOCountsPerRotation=20)
+    # Creazione oggetto e selezione del metodo
+    scan = InterlacedScan(num_angles=32, K_interlace=4, PSOCountsPerRotation=20000)
+    
+    # Seleziona il metodo di interlacciamento
+    scan.select_interlacing_method("Timbir")  # Sostituire con "GoldenAngle" per il metodo Golden Angle
 
-    scan.compute_positions_PSO()
-    scan.generate_interlaced_angles()
-    scan.simulate_taxi_motion()
+    # Esegui i calcoli e i plot
     scan.compute_real_motion()
     scan.convert_angles_to_counts()
 
+    # Plotta i risultati
     scan.plot_all_comparisons()
     scan.plot()
