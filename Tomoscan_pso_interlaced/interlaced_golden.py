@@ -12,6 +12,7 @@ creando una nuova serie di angoli distribuiti uniformemente
 
 import numpy as np
 import matplotlib.pyplot as plt
+import argparse
 
 PSOCountsPerRotation = 200  # numero di impulsi per rotaz completa
 # -----------------------------------
@@ -156,22 +157,69 @@ def plot_combined_cumulative(angles_cumulative, pulses_cumulative):
 # -----------------------------------
 # ESEMPIO DI UTILIZZO ORDINATO
 # -----------------------------------
-angles_list = generate_interlaced_angles(num_angles=32, K_interlace=4)
+def main():
+    global PSOCountsPerRotation
 
-print("\n--- Tabella angoli originali ---")
-print_angles_table(angles_list)
+    parser = argparse.ArgumentParser(description="Generate and analyze interlaced golden-angle angles.")
+    parser.add_argument(
+        "--rotation_start",
+        type=float,
+        default=0.0,
+        help="Start rotation angle in degrees (default: 0.0)",
+    )
+    parser.add_argument(
+        "--rotation_stop",
+        type=float,
+        default=360.0,
+        help="Stop rotation angle in degrees (default: 360.0)",
+    )
+    parser.add_argument(
+        "--num_angles",
+        type=int,
+        default=32,
+        help="Number of angles per loop (default: 32)",
+    )
+    parser.add_argument(
+        "--K_interlace",
+        type=int,
+        default=4,
+        help="Number of interlaced loops K (default: 4)",
+    )
+    parser.add_argument(
+        "--PSOCountsPerRotation",
+        type=int,
+        default=200,
+        help="PSO counts per full rotation (default: 200)",
+    )
 
-print("\n--- Tabella cumulativa ---")
-cumulative_loops = print_cumulative_angles_table(angles_list)
+    args = parser.parse_args()
 
-# Conversione in pulsazioni
-pulses_list = convert_angles_to_pulses(angles_list, description="Original angles")
-pulses_cumulative = convert_angles_to_pulses(cumulative_loops, description="Cumulative angles")
+    # override global PSOCountsPerRotation with CLI value
+    PSOCountsPerRotation = args.PSOCountsPerRotation
 
-# Plot
-plot_interlaced_circles(angles_list)
-plot_angles_vs_pulses(angles_list, pulses_list, title="Original Angles vs Pulses")
-plot_angles_vs_pulses(cumulative_loops, pulses_cumulative, title="Cumulative Angles vs Pulses")
-plot_combined_cumulative(cumulative_loops, pulses_cumulative)
+    angles_list = generate_interlaced_angles(
+        rotation_start=args.rotation_start,
+        rotation_stop=args.rotation_stop,
+        num_angles=args.num_angles,
+        K_interlace=args.K_interlace,
+    )
+
+    print("\n--- Tabella angoli originali ---")
+    print_angles_table(angles_list)
+
+    print("\n--- Tabella cumulativa ---")
+    cumulative_loops = print_cumulative_angles_table(angles_list)
+
+    # Conversione in pulsazioni
+    pulses_list = convert_angles_to_pulses(angles_list, description="Original angles")
+    pulses_cumulative = convert_angles_to_pulses(cumulative_loops, description="Cumulative angles")
+
+    # Plot
+    plot_interlaced_circles(angles_list)
+    plot_angles_vs_pulses(angles_list, pulses_list, title="Original Angles vs Pulses")
+    plot_angles_vs_pulses(cumulative_loops, pulses_cumulative, title="Cumulative Angles vs Pulses")
+    plot_combined_cumulative(cumulative_loops, pulses_cumulative)
 
 
+if __name__ == "__main__":
+    main()
