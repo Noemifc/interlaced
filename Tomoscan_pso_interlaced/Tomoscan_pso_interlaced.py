@@ -2,6 +2,7 @@ import numpy as np
 import math
 import struct
 import matplotlib.pyplot as plt
+import argparse
 
 
 # ============================================================================
@@ -285,10 +286,36 @@ class InterlacedScan:
 
 # ============================================================================
 # ============================================================================
-if __name__ == "__main__":
-    scan = InterlacedScan(num_angles=32, K_interlace=4, PSOCountsPerRotation=20)
+def main():
+    parser = argparse.ArgumentParser(description="Run interlaced scan simulation.")
+    parser.add_argument(
+        "--num_angles",
+        type=int,
+        default=32,
+        help="Number of angles (default: 32)",
+    )
+    parser.add_argument(
+        "--K_interlace",
+        type=int,
+        default=4,
+        help="Interlace factor K (default: 4)",
+    )
+    parser.add_argument(
+        "--PSOCountsPerRotation",
+        type=int,
+        default=20,
+        help="PSO counts per rotation (default: 20)",
+    )
 
-   # select method
+    args = parser.parse_args()
+
+    scan = InterlacedScan(
+        num_angles=args.num_angles,
+        K_interlace=args.K_interlace,
+        PSOCountsPerRotation=args.PSOCountsPerRotation,
+    )
+
+    # select method
     scan.generate_interlaced_timbir()
     #scan.generate_interlaced_goldenagle()
     #scan.generate_interlaced_other()
@@ -300,3 +327,7 @@ if __name__ == "__main__":
 
     scan.plot_all_comparisons()
     scan.plot()
+
+
+if __name__ == "__main__":
+    main()
