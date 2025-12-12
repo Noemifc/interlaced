@@ -1,0 +1,72 @@
+Funzioni e Variabili utilizzate nello script
+
+ 1 compute_frame_time(self)
+- Descrizione: Calcola il tempo totale per acquisire un singolo frame dalla fotocamera
+- Variabili considerate:
+  - selfexposure - Tempo di esposizione della fotocamera
+  - selfreadout - Tempo di lettura dei dati dalla fotocamera
+---
+ 2 compute_senses(self)
+- Descrizione: Determina la direzione con cui il sistema di encoder conta gli impulsi
+- Variabili considerate:
+  - selfPSOCountsPerRotation - Numero di impulsi per una rotazione completa
+  - selfRotationDirection - La direzione di rotazione del motore
+  - selfrotation_start - Angolo iniziale della scansione
+  - selfrotation_stop - Angolo finale della scansione
+---
+ 3 compute_positions_PSO(self)
+- Descrizione: Calcola le posizioni effettive del motore (impulsi) in base al passo angolare e altre variabili di movimento
+- Variabili considerate:
+  - selfPSOCountsPerRotation - Impulsi per una rotazione completa
+  - selfrotation_step - Passo angolare della scansione
+  - selfrotation_start - Angolo iniziale della scansione
+  - selfnum_angles - Numero di angoli generati per la scansione
+  - selfRotationAccelTime - Tempo di accelerazione del motore
+  - selfreadout_margin - Margine di lettura
+- Angoli: Considera selfrotation_start (angolo iniziale) e selfrotation_step (passo angolare), ma non direttamente gli angoli generati durante la scansione interlacciata
+
+---
+
+ 4 simulate_taxi_motion(self, omega_target=10, dt=1e-4)
+- Descrizione: Simula il movimento del motore in fase di accelerazione, velocità costante e decelerazione
+- Variabili considerate:
+  - selfRotationAccelTime - Tempo di accelerazione del motore
+  - selfrotation_step - Passo angolare
+  - selfrotation_start - Angolo iniziale della scansione
+- Angoli: Utilizza selfrotation_step per calcolare i movimenti angolari durante l'accelerazione e la decelerazione, ma non considera direttamente gli angoli interlacciati
+
+---
+
+ 5 compute_real_motion(self)
+- Descrizione: Calcola la traiettoria effettiva del motore interpolando gli angoli TIMBIR con il movimento simulato (taxi)
+- Variabili considerate:
+  - selftheta_interlaced - Angoli interlacciati generati durante la scansione TIMBIR
+  - selftheta_vec - Vettore delle posizioni angolari simulato (ottenuto tramite simulate_taxi_motion)
+  - selft_vec - Vettore temporale che rappresenta i momenti in cui il motore raggiunge ogni angolo
+- Angoli: Utilizza selftheta_interlaced (angoli interlacciati) per calcolare la posizione angolare effettiva in base alla simulazione del movimento
+
+---
+
+ 6 convert_angles_to_counts(self)
+- Descrizione: Converte gli angoli interlacciati (TIMBIR) in impulsi per il motore
+- Variabili considerate:
+  - selfPSOCountsPerRotation - Impulsi per una rotazione completa
+  - selftheta_interlaced - Angoli interlacciati generati durante la scansione TIMBIR
+  - selftheta_interlaced_unwrapped - Angoli "srotolati" (unwrapped) utilizzati per correggere la distribuzione angolare
+- Angoli: Utilizza selftheta_interlaced (angoli interlacciati) e selftheta_interlaced_unwrapped (angoli srotolati) per calcolare gli impulsi necessari al motore
+
+---
+
+ Riepilogo:
+
+- Funzioni che utilizzano angoli:
+  - compute_real_motion: Utilizza selftheta_interlaced (interlacciati) e selftheta_vec
+  - convert_angles_to_counts: Utilizza selftheta_interlaced (interlacciati) e selftheta_interlaced_unwrapped (srotolati)
+
+- Funzioni che non utilizzano direttamente angoli interlacciati o srotolati:
+  - compute_frame_time
+  - compute_senses
+  - compute_positions_PSO
+  - simulate_taxi_motion
+
+Le funzioni che coinvolgono direttamente il calcolo del movimento e la conversione in impulsi sono quelle che considerano gli angoli interlacciati e gli angoli srotolati, come compute_real_motion e convert_angles_to_counts Le altre si concentrano maggiormente su parametri relativi al motore e alla lettura della fotocamera
