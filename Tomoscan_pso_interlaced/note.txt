@@ -68,5 +68,3 @@ Funzioni e Variabili utilizzate nello script
   - compute_senses
   - compute_positions_PSO
   - simulate_taxi_motion
-
-Le funzioni che coinvolgono direttamente il calcolo del movimento e la conversione in impulsi sono quelle che considerano gli angoli interlacciati e gli angoli srotolati, come compute_real_motion e convert_angles_to_counts Le altre si concentrano maggiormente su parametri relativi al motore e alla lettura della fotocamera
