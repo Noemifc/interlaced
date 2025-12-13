@@ -92,6 +92,81 @@ class InterlacedScan:
     # ----------------------------------------------------------------------
     #   GOLDEN ANGLE
     # ----------------------------------------------------------------------
+        def generate_interlaced_goldenangle(self):
+
+        golden_angle = 360 * (3 - np.sqrt(5)) / 2
+        phi_inv = (np.sqrt(5) - 1) / 2
+
+        angles_all = []
+
+        base = np.array([
+            (self.rotation_start + i * golden_angle) % 360
+            for i in range(self.num_angles)
+        ])
+        base = np.sort(base)
+        angles_all.append(base)
+
+        for k in range(1, self.K_interlace):
+            offset = (k / (self.num_angles + 1)) * 360 * phi_inv
+            angles_all.append(np.sort((base + offset) % 360))
+
+        theta = np.sort(np.concatenate(angles_all))
+
+        self.theta_interlaced = theta
+        self.theta_interlaced_unwrapped = np.rad2deg(
+            np.unwrap(np.deg2rad(theta))
+        )
+
+        return angles_all
+
+    # ----------------------------------------------------------------------
+    # Tabelle e plot Golden
+    # ----------------------------------------------------------------------
+    def print_angles_table(self, angles_all):
+        print(f"{'Idx':>5}", end='')
+        for k in range(len(angles_all)):
+            print(f"{f'Loop {k+1}':>12}", end='')
+        print()
+
+        for i in range(len(angles_all[0])):
+            print(f"{i:5}", end='')
+            for loop in angles_all:
+                print(f"{loop[i]:12.3f}", end='')
+            print()
+
+    def print_cumulative_angles_table(self, angles_all):
+        cumulative = [angles_all[0].copy()]
+
+        for k in range(1, len(angles_all)):
+            prev_max = cumulative[-1].max()
+            cumulative.append(angles_all[k] + np.ceil(prev_max / 360) * 360)
+
+        print(f"{'Idx':>5}", end='')
+        for k in range(len(cumulative)):
+            print(f"{f'Loop {k+1}':>15}", end='')
+        print()
+
+        for i in range(len(cumulative[0])):
+            print(f"{i:5}", end='')
+            for loop in cumulative:
+                print(f"{loop[i]:15.3f}", end='')
+            print()
+
+    def plot_interlaced_circles(self, angles_all):
+        fig = plt.figure(figsize=(8, 8))
+        ax = fig.add_subplot(111, polar=True)
+
+        for k, angles in enumerate(angles_all):
+            r = np.full_like(angles, 1 - k * 0.15)
+            ax.plot(np.deg2rad(angles), r, 'o-', label=f'Loop {k+1}')
+
+        ax.set_rticks([])
+        ax.set_theta_zero_location('N')
+        ax.set_theta_direction(-1)
+        ax.legend()
+        ax.set_title("Golden Angle – Interlaced (TIMBIR-style)")
+        plt.show()
+
 
 
 
@@ -301,6 +376,11 @@ def main():
         help="Interlace factor K (default: 4)",
     )
     parser.add_argument(
+        "--mode",
+        choices=["timbir", "golden"], 
+        default="timbir",
+    )
+    parser.add_argument(
         "--PSOCountsPerRotation",
         type=int,
         default=20,
@@ -314,11 +394,16 @@ def main():
         K_interlace=args.K_interlace,
         PSOCountsPerRotation=args.PSOCountsPerRotation,
     )
+   
 
     # select method
-    scan.generate_interlaced_timbir()
-    #scan.generate_interlaced_goldenagle()
-    #scan.generate_interlaced_other()
+    if args.mode == "timbir":
+        scan.generate_interlaced_timbir()
+    else:
+        angles_all = scan.generate_interlaced_goldenangle()
+        scan.print_angles_table(angles_all)
+        scan.print_cumulative_angles_table(angles_all)
+        scan.plot_interlaced_circles(angles_all)
 
     scan.simulate_taxi_motion()
     scan.compute_real_motion()
