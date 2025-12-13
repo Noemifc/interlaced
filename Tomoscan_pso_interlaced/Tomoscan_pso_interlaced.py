@@ -92,7 +92,7 @@ class InterlacedScan:
     # ----------------------------------------------------------------------
     #   GOLDEN ANGLE
     # ----------------------------------------------------------------------
-        def generate_interlaced_goldenangle(self):
+    def generate_interlaced_goldenangle(self):
 
         golden_angle = 360 * (3 - np.sqrt(5)) / 2
         phi_inv = (np.sqrt(5) - 1) / 2
@@ -169,7 +169,7 @@ class InterlacedScan:
 
 
 
-
+   
     # ----------------------------------------------------------------------
     #           FUNZIONI
     # ----------------------------------------------------------------------
@@ -405,10 +405,11 @@ def main():
         scan.print_cumulative_angles_table(angles_all)
         scan.plot_interlaced_circles(angles_all)
 
-    scan.simulate_taxi_motion()
-    scan.compute_real_motion()
+    
     scan.convert_angles_to_counts()
     scan.compute_positions_PSO()
+    scan.simulate_taxi_motion()
+    scan.compute_real_motion()
 
     scan.plot_all_comparisons()
     scan.plot()
