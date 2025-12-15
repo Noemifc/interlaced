@@ -215,7 +215,7 @@ class InterlacedScan:
 
         return angles_all
     # round plot
-
+    # stesso angolo viene acquisito a impulsi diversi in rotazioni fisiche successive nel 2 plot
     def plot_equally_loops_polar(self):
 
         # loop a partire da theta_unwrapped
@@ -342,24 +342,7 @@ class InterlacedScan:
         theta_required = self.theta_interlaced_unwrapped.max()
         theta_max = self.theta_interlaced_unwrapped.max()   # rotazione tot del motore
         #verificare meglio questa riga
-        """"
-           theta_interlaced_unwrapped rappresenta la sequenza temporale reale degli angoli
-           se golden supera 360 
-           se timbir resta 360
-           golden  -> campiona una traiettoria angolare che cresce  oltre 360 più rotazioni fisiche
-                      loop non separabili o non a mod 360
-           timbir -> rotaz continua  ma ma campiona angoli appartenenti alla stessa rotazione secondo 
-                     un ordine temporale interlacciato , bit rev
-           
-           alla funz taxi seve sapere theta_max
-           
-           in teoria il golden può sforare i 360 perchè lo scan è continuo mentre timbir è 
-           vincolato in un singolo loop a prendere angoli a 360 e se va oltre sono angoli 
-           del loop successivo cioè se si va oltre i 360 non è più stesso loop 
         
-        """
-
-        #capire se con tmax il taxi di adatta per entrambi i metodi
 
         accel = decel = omega_target / self.RotationAccelTime
 
@@ -370,10 +353,6 @@ class InterlacedScan:
         #verifica le successive
         theta_acc_end = theta_acc[-1]
         theta_dec_end = theta_acc_end  # decelerazione simmetrica
-
-
-
-
 
         theta_flat_len = 360 - 2 * theta_acc[-1]    # forrzato a 360 fallisce con golden
         T_flat = theta_flat_len / omega_target
@@ -467,8 +446,8 @@ class InterlacedScan:
 
         # Plot 1: angoli interlacciati
         axs[0].plot(x1, y, 'o-', color='tab:blue', label='Impulsi vs Angolo')
-        axs[0].set_title('Angoli TIMBIR vs Impulsi encoder')
-        axs[0].set_xlabel('Angolo interlacciato [deg]')
+        axs[0].set_title('Angoli vs Impulsi encoder')
+        axs[0].set_xlabel('Angoli interlacciato [deg]')
         axs[0].set_ylabel('Impulsi encoder')
         axs[0].grid(True)
         axs[0].legend()
@@ -549,4 +528,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-    
