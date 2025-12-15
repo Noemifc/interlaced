@@ -3,8 +3,6 @@ import math
 import struct
 import matplotlib.pyplot as plt
 import argparse
-
-
 # ============================================================================
 #                     CLASSE INTERLACED SCAN
 # ============================================================================
@@ -24,8 +22,8 @@ class InterlacedScan:
                  exposure=0.01,
                  readout=0.01,
                  readout_margin=1,
-                 K_interlace=4):
-
+                 K_interlace=5):
+# K always
         # Parametri di scansione
         self.rotation_start = rotation_start  # angolo iniziale della scansione
         self.rotation_stop = rotation_stop  # angolo finale della scansione
@@ -45,7 +43,7 @@ class InterlacedScan:
         # Distanza angolare nominale
         self.rotation_step = (rotation_stop - rotation_start) / (num_angles - 1)
 
-#################### MODE
+    #################### MODE
 
     # ----------------------------------------------------------------------
     #   TIMBIR
@@ -85,7 +83,6 @@ class InterlacedScan:
         ax.set_rticks([])
         plt.show()
 
-
     def bit_reverse(self, n, bits):
         return int(f"{n:0{bits}b}"[::-1], 2)
 
@@ -95,7 +92,7 @@ class InterlacedScan:
     def generate_interlaced_goldenangle(self):
 
         golden_angle = 360 * (3 - np.sqrt(5)) / 2
-        phi_inv = (np.sqrt(5) - 1) / 2
+        phi_inv = (np.sqrt(5) - 1) / 2                         #utile per offests
 
         angles_all = []
 
@@ -125,7 +122,7 @@ class InterlacedScan:
     def print_angles_table(self, angles_all):
         print(f"{'Idx':>5}", end='')
         for k in range(len(angles_all)):
-            print(f"{f'Loop {k+1}':>12}", end='')
+            print(f"{f'Loop {k + 1}':>12}", end='')
         print()
 
         for i in range(len(angles_all[0])):
@@ -143,7 +140,7 @@ class InterlacedScan:
 
         print(f"{'Idx':>5}", end='')
         for k in range(len(cumulative)):
-            print(f"{f'Loop {k+1}':>15}", end='')
+            print(f"{f'Loop {k + 1}':>15}", end='')
         print()
 
         for i in range(len(cumulative[0])):
@@ -158,7 +155,7 @@ class InterlacedScan:
 
         for k, angles in enumerate(angles_all):
             r = np.full_like(angles, 1 - k * 0.15)
-            ax.plot(np.deg2rad(angles), r, 'o-', label=f'Loop {k+1}')
+            ax.plot(np.deg2rad(angles), r, 'o-', label=f'Loop {k + 1}')
 
         ax.set_rticks([])
         ax.set_theta_zero_location('N')
@@ -168,8 +165,107 @@ class InterlacedScan:
         plt.show()
 
 
+    # ----------------------------------------------------------------------
+    #   EQUALLY SPACED
+    # ----------------------------------------------------------------------
+    # ----------------------------------------------------------------------
+    #   EQUALLY SPACED – K-TURN
+    # ----------------------------------------------------------------------
+    def generate_interlaced_equallyspaced(self, delta_theta=None):
+        """
+        θ_n = θ_start + n * dθ
+        dθ = (θ_stop - θ_start) / (N - 1) o def da user
+        """
+        # -------------------------------
+        # Step
+        # -------------------------------
+        if delta_theta is not None:
+            delta_theta = float(delta_theta)
+        else:
+            delta_theta = (self.rotation_stop - self.rotation_start) / (self.num_angles - 1)
 
-   
+        self.rotation_step = delta_theta
+
+        # -------------------------------
+        # single loop
+        # -------------------------------
+        base = self.rotation_start + np.arange(self.num_angles) * delta_theta
+
+        # -------------------------------
+        # multi-turn
+        # -------------------------------
+        angles_all = []
+        for k in range(self.K_interlace):
+            angles_all.append(base + k * 360.0)
+
+        # concateno tutti i loop
+        theta_unwrapped = np.concatenate(angles_all)
+
+        # versione modulo 360 (per PSO / FPGA)
+        theta = np.mod(theta_unwrapped, 360.0)
+
+        # -------------------------------
+        # for plot
+        # -------------------------------
+        self.theta_interlaced = np.array(theta)
+        self.theta_interlaced_unwrapped = np.array(theta_unwrapped)
+
+        if self.K_interlace > 1:
+            self.rotation_stop = theta_unwrapped[-1]   # motore ruota fino all'ultimo unwrapped
+
+        return angles_all
+    # round plot
+
+    def plot_equally_loops_polar(self):
+
+        # loop a partire da theta_unwrapped
+        theta_unwrapped = self.theta_interlaced_unwrapped
+        theta_mod = np.mod(theta_unwrapped, 360.0)
+
+        fig = plt.figure(figsize=(7, 7))
+        ax = fig.add_subplot(111, polar=True)
+
+        ax.set_title(
+            f"Equally Spaced Acquisition (N={self.num_angles}, K={self.K_interlace})\n"
+            "Each loop on its own circle",
+            va='bottom', fontsize=13
+        )
+
+        # Un cerchio per ogni loop
+        for k in range(self.K_interlace):
+            start = k * self.num_angles
+            stop = (k + 1) * self.num_angles
+
+            theta_k = theta_mod[start:stop]
+            radii = np.full_like(theta_k, 1 - k * 0.15)
+
+            ax.plot(
+                np.deg2rad(theta_k),
+                radii,
+                '-o',
+                lw=1.2,
+                ms=5,
+                alpha=0.85
+            )
+
+            # etichetta loop
+            for i, ang in enumerate(theta_k):
+                ax.text(
+                    np.deg2rad(ang),
+                    radii[i] + 0.03,
+                    str(k + 1),
+                    ha='center',
+                    va='bottom',
+                    fontsize=8
+                )
+
+        ax.set_rticks([])
+        ax.set_theta_zero_location('N')
+        ax.set_theta_direction(-1)
+
+        plt.show()
+
+
     # ----------------------------------------------------------------------
     #           FUNZIONI
     # ----------------------------------------------------------------------
@@ -238,11 +334,32 @@ class InterlacedScan:
 
         self.theta_classic = self.rotation_start_new + np.arange(self.num_angles) * self.rotation_step
 
-
     # ----------------------------------------------------------------------
     # Modello taxi
     # ----------------------------------------------------------------------
     def simulate_taxi_motion(self, omega_target=10, dt=1e-4):
+
+        theta_required = self.theta_interlaced_unwrapped.max()
+        theta_max = self.theta_interlaced_unwrapped.max()   # rotazione tot del motore
+        #verificare meglio questa riga
+        """"
+           theta_interlaced_unwrapped rappresenta la sequenza temporale reale degli angoli
+           se golden supera 360 
+           se timbir resta 360
+           golden  -> campiona una traiettoria angolare che cresce  oltre 360 più rotazioni fisiche
+                      loop non separabili o non a mod 360
+           timbir -> rotaz continua  ma ma campiona angoli appartenenti alla stessa rotazione secondo 
+                     un ordine temporale interlacciato , bit rev
+           
+           alla funz taxi seve sapere theta_max
+           
+           in teoria il golden può sforare i 360 perchè lo scan è continuo mentre timbir è 
+           vincolato in un singolo loop a prendere angoli a 360 e se va oltre sono angoli 
+           del loop successivo cioè se si va oltre i 360 non è più stesso loop 
+        
+        """
+
+        #capire se con tmax il taxi di adatta per entrambi i metodi
 
         accel = decel = omega_target / self.RotationAccelTime
 
@@ -250,7 +367,15 @@ class InterlacedScan:
         t_acc = np.arange(0, T_acc, dt)
         theta_acc = 0.5 * accel * t_acc ** 2
 
-        theta_flat_len = 360 - 2 * theta_acc[-1]
+        #verifica le successive
+        theta_acc_end = theta_acc[-1]
+        theta_dec_end = theta_acc_end  # decelerazione simmetrica
+
+
+
+
+
+        theta_flat_len = 360 - 2 * theta_acc[-1]    # forrzato a 360 fallisce con golden
         T_flat = theta_flat_len / omega_target
         t_flat = np.arange(0, T_flat, dt)
         theta_flat = theta_acc[-1] + omega_target * t_flat
@@ -259,11 +384,12 @@ class InterlacedScan:
         t_dec = np.arange(0, T_dec, dt)
         theta_dec = theta_flat[-1] + omega_target * t_dec - 0.5 * decel * t_dec ** 2
 
+        self.theta_vec = np.concatenate([theta_acc, theta_flat, theta_dec])
+
         self.t_vec = np.concatenate([t_acc,
                                      t_acc[-1] + t_flat,
                                      t_acc[-1] + t_flat[-1] + t_dec])
 
-        self.theta_vec = np.concatenate([theta_acc, theta_flat, theta_dec])
 
     # ----------------------------------------------------------------------
     # tempi reali = angoli TIMBIR
@@ -377,7 +503,7 @@ def main():
     )
     parser.add_argument(
         "--mode",
-        choices=["timbir", "golden"], 
+        choices=["timbir", "golden", "equally"],
         default="timbir",
     )
     parser.add_argument(
@@ -394,26 +520,33 @@ def main():
         K_interlace=args.K_interlace,
         PSOCountsPerRotation=args.PSOCountsPerRotation,
     )
-   
 
     # select method
     if args.mode == "timbir":
         scan.generate_interlaced_timbir()
-    else:
+
+    elif args.mode == "golden":
         angles_all = scan.generate_interlaced_goldenangle()
         scan.print_angles_table(angles_all)
         scan.print_cumulative_angles_table(angles_all)
         scan.plot_interlaced_circles(angles_all)
 
-    
-    scan.convert_angles_to_counts()
+    elif args.mode == "equally":
+        scan.generate_interlaced_equallyspaced()
+        scan.plot_equally_loops_polar()
+
+    # sorted
     scan.compute_positions_PSO()
     scan.simulate_taxi_motion()
     scan.compute_real_motion()
+    scan.convert_angles_to_counts()
+
 
     scan.plot_all_comparisons()
     scan.plot()
 
 
+
 if __name__ == "__main__":
     main()
+    
