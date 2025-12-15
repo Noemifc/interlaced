@@ -116,9 +116,10 @@ class InterlacedScan:
 
         return angles_all
 
-    # ----------------------------------------------------------------------
+    
     # Tabelle e plot Golden
     # ----------------------------------------------------------------------
+    
     def print_angles_table(self, angles_all):
         print(f"{'Idx':>5}", end='')
         for k in range(len(angles_all)):
@@ -172,9 +173,9 @@ class InterlacedScan:
         θ_n = θ_start + n * dθ
         dθ = (θ_stop - θ_start) / (N - 1) o def da user
         """
-        # -------------------------------
+       
         # Step
-        # -------------------------------
+        
         if delta_theta is not None:
             delta_theta = float(delta_theta)
         else:
@@ -182,14 +183,14 @@ class InterlacedScan:
 
         self.rotation_step = delta_theta
 
-        # -------------------------------
+        
         # single loop
-        # -------------------------------
+       
         base = self.rotation_start + np.arange(self.num_angles) * delta_theta
 
-        # -------------------------------
+
         # multi-turn
-        # -------------------------------
+
         angles_all = []
         for k in range(self.K_interlace):
             angles_all.append(base + k * 360.0)
@@ -200,9 +201,9 @@ class InterlacedScan:
         # versione modulo 360 (per PSO / FPGA)
         theta = np.mod(theta_unwrapped, 360.0)
 
-        # -------------------------------
+         
         # for plot
-        # -------------------------------
+       
         self.theta_interlaced = np.array(theta)
         self.theta_interlaced_unwrapped = np.array(theta_unwrapped)
 
@@ -265,6 +266,7 @@ class InterlacedScan:
     # ----------------------------------------------------------------------
     #           FUNZIONI
     # ----------------------------------------------------------------------
+
 
     # ----------------------------------------------------------------------
     #  TomoScanPSO.compute_senses()
