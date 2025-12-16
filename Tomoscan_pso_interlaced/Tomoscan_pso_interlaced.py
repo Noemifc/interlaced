@@ -603,9 +603,17 @@ def main():
         scan.generate_interlaced_kturns()
         scan.plot_equally_loops_polar()
         
-    elif args.mode == "equallymultitourn":
+    elif args.mode == "kturns":
+        scan.generate_interlaced_kturns()
+        scan.plot_equally_loops_polar()
+        
+    elif args.mode == "equallytimbirlike":
         scan.generate_interlaced_equallytimbirlike()
         scan.plot_equally_loops_polar()
+
+
+
+    
 
     # sorted
     scan.compute_positions_PSO()
