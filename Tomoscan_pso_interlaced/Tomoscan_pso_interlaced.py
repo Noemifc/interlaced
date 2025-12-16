@@ -212,7 +212,7 @@ class InterlacedScan:
         return angles_all
     # round plot
     # stesso angolo viene acquisito a impulsi diversi in rotazioni fisiche successive nel 2 plot
-    def plot_equally_loops_polar(self):
+    def plot_equally_loops_polar_kturs(self):
 
         # loop a partire da theta_unwrapped
         theta_unwrapped = self.theta_interlaced_unwrapped
@@ -241,7 +241,7 @@ class InterlacedScan:
                 '-o',
                 lw=1.2,
                 ms=5,
-                alpha=0.85
+                 alpha=0.85
             )
 
             # etichetta loop
@@ -268,7 +268,7 @@ class InterlacedScan:
     # multi-turn acquisition (TIMBIR-like)
     # ----------------------------------------------------------------------
 
-    def generate_interlaced_equallytimbirlike(self, delta_theta=None):
+    def generate_interlaced_multiturn(self, delta_theta=None):
 
         N = self.num_angles
         K = self.K_interlace
@@ -301,9 +301,9 @@ class InterlacedScan:
             self.rotation_stop = theta_unwrapped[-1]   # motore ruota fino all'ultimo unwrapped
 
         return angles_all
-    # round plot
+    # roun d plot
     # stesso angolo viene acquisito a impulsi diversi in rotazioni fisiche successive nel 2 plot
-    def plot_equally_loops_polar(self):
+    def plot_equally_loops_polar_multiturn(self):
 
         # loop a partire da theta_unwrapped
         theta_unwrapped = self.theta_interlaced_unwrapped
@@ -598,18 +598,14 @@ def main():
         scan.print_angles_table(angles_all)
         scan.print_cumulative_angles_table(angles_all)
         scan.plot_interlaced_circles(angles_all)
-
-    elif args.mode == "equally":
-        scan.generate_interlaced_kturns()
-        scan.plot_equally_loops_polar()
         
     elif args.mode == "kturns":
         scan.generate_interlaced_kturns()
-        scan.plot_equally_loops_polar()
+        scan.plot_equally_loops_polar_kturns()
         
-    elif args.mode == "equallytimbirlike":
-        scan.generate_interlaced_equallytimbirlike()
-        scan.plot_equally_loops_polar()
+    elif args.mode == "multiturns":
+        scan.generate_interlaced_multiturns()
+        scan.plot_equally_loops_polar_multiturns()
 
 
 
