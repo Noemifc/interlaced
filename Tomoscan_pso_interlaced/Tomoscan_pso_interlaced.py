@@ -188,7 +188,6 @@ class InterlacedScan:
        
         base = self.rotation_start + np.arange(self.num_angles) * delta_theta
 
-
         # multi-turn
 
         angles_all = []
@@ -261,6 +260,98 @@ class InterlacedScan:
         ax.set_theta_direction(-1)
 
         plt.show()
+
+
+
+    # ----------------------------------------------------------------------
+    #   EQUALLY SPACED 
+    # multi-turn acquisition (TIMBIR-like)
+    # ----------------------------------------------------------------------
+
+    def generate_interlaced_equallytimbirlike(self, delta_theta=None):
+
+        N = self.num_angles
+        K = self.K_interlace
+       
+        # Step
+        if delta_theta is not None:
+            delta_theta = float(delta_theta)
+        else:
+            delta_theta = (self.rotation_stop - self.rotation_start) / (N - 1)
+
+        self.rotation_step = delta_theta
+
+        n = np.arange(N)
+        angles_all = []
+        
+        for k in range(K):
+            theta_n = self.rotation_start + (n + k / K) * delta_theta   #  θ_n = θ_start + (n + k/Kloops) 
+            angles_all.append(theta_n)
+
+        # concateno tutti i loop
+        theta_unwrapped = np.concatenate(angles_all)
+
+        # versione modulo 360 (per PSO / FPGA)
+        theta = np.mod(theta_unwrapped, 360.0)
+         # for plot
+        self.theta_interlaced = np.array(theta)
+        self.theta_interlaced_unwrapped = np.array(theta_unwrapped)
+
+        if self.K_interlace > 1:
+            self.rotation_stop = theta_unwrapped[-1]   # motore ruota fino all'ultimo unwrapped
+
+        return angles_all
+    # round plot
+    # stesso angolo viene acquisito a impulsi diversi in rotazioni fisiche successive nel 2 plot
+    def plot_equally_loops_polar(self):
+
+        # loop a partire da theta_unwrapped
+        theta_unwrapped = self.theta_interlaced_unwrapped
+        theta_mod = np.mod(theta_unwrapped, 360.0)
+
+        fig = plt.figure(figsize=(7, 7))
+        ax = fig.add_subplot(111, polar=True)
+
+        ax.set_title(
+            f"Equally Spaced Acquisition (N={self.num_angles}, K={self.K_interlace})\n"
+            "Each loop on its own circle",
+            va='bottom', fontsize=13
+        )
+
+        # Un cerchio per ogni loop
+        for k in range(self.K_interlace):
+            start = k * self.num_angles
+            stop = (k + 1) * self.num_angles
+
+            theta_k = theta_mod[start:stop]
+            radii = np.full_like(theta_k, 1 - k * 0.15)
+
+            ax.plot(
+                np.deg2rad(theta_k),
+                radii,
+                '-o',
+                lw=1.2,
+                ms=5,
+                alpha=0.85
+            )
+
+            # etichetta loop
+            for i, ang in enumerate(theta_k):
+                ax.text(
+                    np.deg2rad(ang),
+                    radii[i] + 0.03,
+                    str(k + 1),
+                    ha='center',
+                    va='bottom',
+                    fontsize=8
+                )
+
+        ax.set_rticks([])
+        ax.set_theta_zero_location('N')
+        ax.set_theta_direction(-1)
+
+        plt.show()
+
 
 
     # ----------------------------------------------------------------------
@@ -510,6 +601,10 @@ def main():
 
     elif args.mode == "equally":
         scan.generate_interlaced_kturns()
+        scan.plot_equally_loops_polar()
+        
+    elif args.mode == "equallymultitourn":
+        scan.generate_interlaced_equallytimbirlike()
         scan.plot_equally_loops_polar()
 
     # sorted
