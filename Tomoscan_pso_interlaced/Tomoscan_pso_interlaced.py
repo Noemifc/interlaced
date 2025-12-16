@@ -49,6 +49,11 @@ class InterlacedScan:
     #   TIMBIR
     # ----------------------------------------------------------------------
     def generate_interlaced_timbir(self):
+        '''il fattore di interlacciamento K deve essere una potenza di due affinché l’operazione di
+        bit reversal produca una permutazione uniforme e completa degli indici di loop
+        i valori non binari di K introducono aliasing e distribuzioni non omogenee degli angoli
+        verificare i funzionamenti a vari k 
+        '''
 
         bits = int(np.log2(self.K_interlace))
         theta = []
