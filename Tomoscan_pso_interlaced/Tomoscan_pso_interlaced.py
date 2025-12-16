@@ -53,6 +53,8 @@ class InterlacedScan:
         bits = int(np.log2(self.K_interlace))
         theta = []
         group_indices = []
+        assert (self.K_interlace & (self.K_interlace - 1)) == 0   #bit rev definito su n fisso di bit , la permutazione è completa solo con vincolo di pot di 2 
+
 
         for n in range(self.num_angles):
             group = (n * self.K_interlace // self.num_angles) % self.K_interlace
@@ -434,20 +436,36 @@ class InterlacedScan:
     def simulate_taxi_motion(self, omega_target=10, dt=1e-4):
 
         theta_required = self.theta_interlaced_unwrapped.max()
-        theta_max = self.theta_interlaced_unwrapped.max()   # rotazione tot del motore
-        #verificare meglio questa riga
+        theta_max = float(np.max(self.theta_interlaced_unwrapped))   #indipendenza dal metodo 
+        #theta_max = self.theta_interlaced_unwrapped.max()   # rotazione tot del motore
         
-
+        #accelerazione 
         accel = decel = omega_target / self.RotationAccelTime
-
-        T_acc = omega_target / accel
-        t_acc = np.arange(0, T_acc, dt)
-        theta_acc = 0.5 * accel * t_acc ** 2
-
-        #verifica le successive
+        theta_acc = 0.5 * accel * t_acc**2
         theta_acc_end = theta_acc[-1]
-        theta_dec_end = theta_acc_end  # decelerazione simmetrica
+        t_acc = np.arange(0, self.RotationAccelTime, dt)
 
+        # plateau
+        theta_flat_len = theta_max - 2 * theta_acc_end
+        if theta_flat_len < 0:
+            raise ValueError("Profilo di moto non realizzabile")
+
+        t_flat = np.arange(0, theta_flat_len / omega_target, dt)
+        theta_flat = theta_acc_end + omega_target * t_flat
+
+        # decelerazione
+        t_dec = np.arange(0, self.RotationAccelTime, dt)
+        theta_dec = ( theta_flat[-1] + omega_target * t_dec - 0.5 * decel * t_dec**2 )
+       
+        self.theta_vec = np.concatenate([theta_acc, theta_flat, theta_dec])
+        self.t_vec = np.concatenate([
+        t_acc,
+        t_acc[-1] + t_flat,
+        t_acc[-1] + t_flat[-1] + t_dec ])
+    
+        
+     
+"""
         theta_flat_len = theta_max - 2 * theta_acc[-1]    # dovrebbe generalizzare meglio 
         #theta_flat_len = 360 - 2 * theta_acc[-1]         # forzato a 360 fallisce con golden
        
@@ -464,7 +482,7 @@ class InterlacedScan:
 
         self.t_vec = np.concatenate([t_acc,
                                      t_acc[-1] + t_flat,
-                                     t_acc[-1] + t_flat[-1] + t_dec])
+                                     t_acc[-1] + t_flat[-1] + t_dec]) """
 
 
     # ----------------------------------------------------------------------
