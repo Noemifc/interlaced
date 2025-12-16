@@ -212,7 +212,8 @@ class InterlacedScan:
         return angles_all
     # round plot
     # stesso angolo viene acquisito a impulsi diversi in rotazioni fisiche successive nel 2 plot
-    def plot_equally_loops_polar_kturs(self):
+
+    def plot_equally_loops_polar_kturns(self):
 
         # loop a partire da theta_unwrapped
         theta_unwrapped = self.theta_interlaced_unwrapped
@@ -267,7 +268,6 @@ class InterlacedScan:
     #   EQUALLY SPACED 
     # multi-turn acquisition (TIMBIR-like)
     # ----------------------------------------------------------------------
-
     def generate_interlaced_multiturn(self, delta_theta=None):
 
         N = self.num_angles
@@ -303,7 +303,7 @@ class InterlacedScan:
         return angles_all
     # roun d plot
     # stesso angolo viene acquisito a impulsi diversi in rotazioni fisiche successive nel 2 plot
-    def plot_equally_loops_polar_multiturn(self):
+    def plot_equally_loops_polar_multiturns(self):
 
         # loop a partire da theta_unwrapped
         theta_unwrapped = self.theta_interlaced_unwrapped
