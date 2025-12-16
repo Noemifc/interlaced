@@ -452,8 +452,12 @@ class InterlacedScan:
 
         # plateau
         theta_flat_len = theta_max - 2 * theta_acc_end
+        # se motore non riesce a raggiungere la v target prima di dover frenare 
         if theta_flat_len < 0:
             raise ValueError("Profilo di moto non realizzabile")
+
+        '''Il profilo di moto deve prevedere un tratto a velocità costante
+        in caso contrario il sistema non può sincronizzare correttamente l’acquisizione con il PSO '''
 
         t_flat = np.arange(0, theta_flat_len / omega_target, dt)
         theta_flat = theta_acc_end + omega_target * t_flat
