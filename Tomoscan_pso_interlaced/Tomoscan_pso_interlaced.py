@@ -168,7 +168,7 @@ class InterlacedScan:
     # ----------------------------------------------------------------------
     #   EQUALLY SPACED – K-TURN
     # ----------------------------------------------------------------------
-    def generate_interlaced_equallyspaced(self, delta_theta=None):
+    def generate_interlaced_kturns(self, delta_theta=None):
         """
         θ_n = θ_start + n * dθ
         dθ = (θ_stop - θ_start) / (N - 1) o def da user
@@ -509,7 +509,7 @@ def main():
         scan.plot_interlaced_circles(angles_all)
 
     elif args.mode == "equally":
-        scan.generate_interlaced_equallyspaced()
+        scan.generate_interlaced_kturns()
         scan.plot_equally_loops_polar()
 
     # sorted
