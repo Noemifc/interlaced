@@ -23,7 +23,7 @@ class InterlacedScan:
                  readout=0.01,
                  readout_margin=1,
                  K_interlace=5):
-# K always
+
         # Parametri di scansione
         self.rotation_start = rotation_start  # angolo iniziale della scansione
         self.rotation_stop = rotation_stop  # angolo finale della scansione
@@ -85,6 +85,11 @@ class InterlacedScan:
 
     def bit_reverse(self, n, bits):
         return int(f"{n:0{bits}b}"[::-1], 2)
+
+
+    # unwrap solo per analisi temporale, non rappresenta traiettoria fisica reale
+
+
 
     # ----------------------------------------------------------------------
     #   GOLDEN ANGLE
@@ -443,7 +448,10 @@ class InterlacedScan:
         theta_acc_end = theta_acc[-1]
         theta_dec_end = theta_acc_end  # decelerazione simmetrica
 
-        theta_flat_len = 360 - 2 * theta_acc[-1]    # forrzato a 360 fallisce con golden
+        theta_flat_len = theta_max - 2 * theta_acc[-1]    # dovrebbe generalizzare meglio 
+        #theta_flat_len = 360 - 2 * theta_acc[-1]         # forzato a 360 fallisce con golden
+       
+        
         T_flat = theta_flat_len / omega_target
         t_flat = np.arange(0, T_flat, dt)
         theta_flat = theta_acc[-1] + omega_target * t_flat
@@ -464,6 +472,7 @@ class InterlacedScan:
     # ----------------------------------------------------------------------
     def compute_real_motion(self):
 
+        # self.t_real = np.interp(self.theta_interlaced_unwrapped, self.theta_vec, self.t_vec)   
         self.t_real = np.interp(self.theta_interlaced, self.theta_vec, self.t_vec)
         self.theta_real = np.interp(self.t_real, self.t_vec, self.theta_vec)
 
@@ -571,7 +580,7 @@ def main():
     )
     parser.add_argument(
         "--mode",
-        choices=["timbir", "golden", "equally"],
+        choices=["timbir", "golden", "kturns", "multiturns"],
         default="timbir",
     )
     parser.add_argument(
