@@ -212,6 +212,7 @@ class InterlacedScan:
         return angles_all
     # round plot
     # stesso angolo viene acquisito a impulsi diversi in rotazioni fisiche successive nel 2 plot
+
     def plot_equally_loops_polar_kturns(self):
 
         # loop a partire da theta_unwrapped
@@ -241,7 +242,7 @@ class InterlacedScan:
                 '-o',
                 lw=1.2,
                 ms=5,
-                alpha=0.85
+                 alpha=0.85
             )
 
             # etichetta loop
@@ -267,8 +268,7 @@ class InterlacedScan:
     #   EQUALLY SPACED 
     # multi-turn acquisition (TIMBIR-like)
     # ----------------------------------------------------------------------
-
-    def generate_interlaced_multiturns(self, delta_theta=None):
+    def generate_interlaced_multiturn(self, delta_theta=None):
 
         N = self.num_angles
         K = self.K_interlace
@@ -301,7 +301,7 @@ class InterlacedScan:
             self.rotation_stop = theta_unwrapped[-1]   # motore ruota fino all'ultimo unwrapped
 
         return angles_all
-    # round plot
+    # roun d plot
     # stesso angolo viene acquisito a impulsi diversi in rotazioni fisiche successive nel 2 plot
     def plot_equally_loops_polar_multiturns(self):
 
