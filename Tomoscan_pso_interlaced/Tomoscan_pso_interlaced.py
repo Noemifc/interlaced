@@ -419,7 +419,7 @@ class InterlacedScan:
 # VAN DER CORPUT INTERLACED – K-TURN
 # =========================================================
 
-def generate_interlaced_corput_kturns(self, delta_theta=None):
+def generate_interlaced_corput(self, delta_theta=None):
 
     if delta_theta is not None:
         delta_theta = float(delta_theta)
