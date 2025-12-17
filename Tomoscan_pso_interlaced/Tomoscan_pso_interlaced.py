@@ -185,8 +185,7 @@ class InterlacedScan:
         θ_n = θ_start + n * dθ
         dθ = (θ_stop - θ_start) / (N - 1) o def da user
         """
-       
-        # Step
+          # Step
         
         if delta_theta is not None:
             delta_theta = float(delta_theta)
@@ -195,7 +194,6 @@ class InterlacedScan:
 
         self.rotation_step = delta_theta
 
-        
         # single loop
        
         base = self.rotation_start + np.arange(self.num_angles) * delta_theta
@@ -205,16 +203,13 @@ class InterlacedScan:
         angles_all = []
         for k in range(self.K_interlace):
             angles_all.append(base + k * 360.0)
-
         # concateno tutti i loop
         theta_unwrapped = np.concatenate(angles_all)
-
         # versione modulo 360 (per PSO / FPGA)
         theta = np.mod(theta_unwrapped, 360.0)
-
-         
-        # for plot
        
+        # for plot
+      
         self.theta_interlaced = np.array(theta)
         self.theta_interlaced_unwrapped = np.array(theta_unwrapped)
 
@@ -274,32 +269,34 @@ class InterlacedScan:
         plt.show()
 
     def print_angles_table_kturns(self, angles_all):
-    print(f"{'Idx':>5}", end='')
-    for k in range(len(angles_all)):
-        print(f"{f'Loop {k + 1} K-Turn':>15}", end='')  # aggiunto K-Turn
-    print()
-    for i in range(len(angles_all[0])):
-        print(f"{i:5}", end='')
-        for loop in angles_all:
-            print(f"{loop[i]:15.3f}", end='')
-        print()
+        print(f"{'Idx':>5}", end='')
+        for k in range(len(angles_all)):
+            print(f"{f'Loop {k + 1} K-Turn':>15}", end='')  # aggiunto K-Turn
+         print()
+        
+         for i in range(len(angles_all[0])):
+             print(f"{i:5}", end='')
+             for loop in angles_all:
+                 print(f"{loop[i]:15.3f}", end='')
+             print()
+
 
     def print_cumulative_angles_table_kturns(self, angles_all):
-    cumulative = [angles_all[0].copy()]
-    for k in range(1, len(angles_all)):
-        prev_max = cumulative[-1].max()
-        cumulative.append(angles_all[k] + np.ceil(prev_max / 360) * 360)
+        cumulative = [angles_all[0].copy()]
+        for k in range(1, len(angles_all)):
+            prev_max = cumulative[-1].max()
+            cumulative.append(angles_all[k] + np.ceil(prev_max / 360) * 360)
 
-    print(f"{'Idx':>5}", end='')
-    for k in range(len(cumulative)):
-        print(f"{f'Loop {k + 1} K-Turn':>18}", end='')  # aggiunto K-Turn
-    print()
-
-    for i in range(len(cumulative[0])):
-        print(f"{i:5}", end='')
-        for loop in cumulative:
-            print(f"{loop[i]:18.3f}", end='')
+        print(f"{'Idx':>5}", end='')
+        for k in range(len(cumulative)):
+            print(f"{f'Loop {k + 1} K-Turn':>18}", end='')  # aggiunto K-Turn
         print()
+
+        for i in range(len(cumulative[0])):
+            print(f"{i:5}", end='')
+            for loop in cumulative:
+                print(f"{loop[i]:18.3f}", end='')
+            print()
 
     # ----------------------------------------------------------------------
     #   EQUALLY SPACED 
