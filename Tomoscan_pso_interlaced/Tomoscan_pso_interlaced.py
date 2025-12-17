@@ -531,6 +531,56 @@ def print_cumulative_angles_table_corput(self, angles_all):
         print()
 
     # ----------------------------------------------------------------------
+def plot_live_corput(self):
+    """
+    Plot temporale (live-style) degli angoli Van der Corput.
+    Mostra l'ordine di acquisizione reale nel tempo.
+    """
+    theta_unwrapped = self.theta_interlaced_unwrapped
+    theta_mod = np.mod(theta_unwrapped, 360.0)
+
+    fig, ax = plt.subplots(figsize=(9, 5))
+
+    n_total = len(theta_mod)
+    indices = np.arange(n_total)
+
+    # colore diverso per ogni loop
+    for k in range(self.K_interlace):
+        start = k * self.num_angles
+        stop = (k + 1) * self.num_angles
+
+        ax.scatter(
+            indices[start:stop],
+            theta_mod[start:stop],
+            s=18,
+            alpha=0.85,
+            label=f"Loop {k+1}"
+        )
+
+        # linea guida (opzionale, molto utile visivamente)
+        ax.plot(
+            indices[start:stop],
+            theta_mod[start:stop],
+            lw=0.6,
+            alpha=0.4
+        )
+
+    ax.set_title(
+        f"Live Acquisition Order – Van der Corput (N={self.num_angles}, K={self.K_interlace})",
+        fontsize=13
+    )
+
+    ax.set_xlabel("Acquisition index")
+    ax.set_ylabel("Angle [deg]")
+    ax.set_ylim(0, 360)
+    ax.grid(True, alpha=0.3)
+    ax.legend()
+
+    plt.tight_layout()
+    plt.show()
+
+
+    # ----------------------------------------------------------------------
     #           FUNZIONI
     # ----------------------------------------------------------------------
 
@@ -816,6 +866,7 @@ def main():
         scan.plot_equally_loops_polar_corput()
         scan.print_cumulative_angles_table_corput()
         scan.print_angles_table_corput()
+        scan.plot_live_corput()
 
 
 
