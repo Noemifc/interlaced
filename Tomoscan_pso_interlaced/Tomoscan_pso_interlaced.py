@@ -415,7 +415,120 @@ class InterlacedScan:
             print(f"{loop[i]:20.3f}", end='')
         print()
 
+# =========================================================
+# VAN DER CORPUT INTERLACED – K-TURN
+# =========================================================
 
+def generate_interlaced_corput_kturns(self, delta_theta=None):
+
+    if delta_theta is not None:
+        delta_theta = float(delta_theta)
+    else:
+        delta_theta = (self.rotation_stop - self.rotation_start) / (self.num_angles - 1)
+
+    self.rotation_step = delta_theta
+    base = self.rotation_start + np.arange(self.num_angles) * delta_theta
+    angles_all = []
+    bits = int(np.ceil(np.log2(self.num_angles)))
+
+    for k in range(self.K_interlace):
+        indices = np.array([self.bit_reverse(i, bits) for i in range(self.num_angles)])
+        loop_angles = base[indices] + k * 360.0
+        angles_all.append(loop_angles)
+
+    theta_unwrapped = np.concatenate(angles_all)
+    theta = np.mod(theta_unwrapped, 360.0)
+
+    self.theta_interlaced = np.array(theta)
+    self.theta_interlaced_unwrapped = np.array(theta_unwrapped)
+
+    if self.K_interlace > 1:
+        self.rotation_stop = theta_unwrapped[-1]
+
+    return angles_all
+
+# ----------------------------------------------------------------------
+def plot_equally_loops_polar_corput(self):
+    """
+    Plot polar dei loop interlacciati Van der Corput
+    """
+    theta_unwrapped = self.theta_interlaced_unwrapped
+    theta_mod = np.mod(theta_unwrapped, 360.0)
+
+    fig = plt.figure(figsize=(7, 7))
+    ax = fig.add_subplot(111, polar=True)
+    ax.set_title(
+        f"Interlaced Van der Corput K-Turn (N={self.num_angles}, K={self.K_interlace})",
+        va='bottom', fontsize=13
+    )
+
+    for k in range(self.K_interlace):
+        start = k * self.num_angles
+        stop = (k + 1) * self.num_angles
+        theta_k = theta_mod[start:stop]
+        radii = np.full_like(theta_k, 1 - k * 0.15)
+
+        ax.plot(
+            np.deg2rad(theta_k),
+            radii,
+            '-o',
+            lw=1.2,
+            ms=5,
+            alpha=0.85
+        )
+
+        # etichetta loop
+        for i, ang in enumerate(theta_k):
+            ax.text(
+                np.deg2rad(ang),
+                radii[i] + 0.03,
+                str(k + 1),
+                ha='center',
+                va='bottom',
+                fontsize=8
+            )
+
+    ax.set_rticks([])
+    ax.set_theta_zero_location('N')
+    ax.set_theta_direction(-1)
+    plt.show()
+
+# ----------------------------------------------------------------------
+def print_angles_table_corput(self, angles_all):
+    """
+    Stampa tabella degli angoli Van der Corput per loop
+    """
+    print(f"{'Idx':>5}", end='')
+    for k in range(len(angles_all)):
+        print(f"{f'Loop {k + 1} K-Turn':>15}", end='')
+    print()
+
+    for i in range(len(angles_all[0])):
+        print(f"{i:5}", end='')
+        for loop in angles_all:
+            print(f"{loop[i]:15.3f}", end='')
+        print()
+
+# ----------------------------------------------------------------------
+def print_cumulative_angles_table_corput(self, angles_all):
+    """
+    Stampa tabella cumulativa degli angoli Van der Corput per loop
+    """
+    cumulative = [angles_all[0].copy()]
+    for k in range(1, len(angles_all)):
+        prev_max = cumulative[-1].max()
+        cumulative.append(angles_all[k] + np.ceil(prev_max / 360) * 360)
+
+    print(f"{'Idx':>5}", end='')
+    for k in range(len(cumulative)):
+        print(f"{f'Loop {k + 1} K-Turn':>18}", end='')
+    print()
+
+    for i in range(len(cumulative[0])):
+        print(f"{i:5}", end='')
+        for loop in cumulative:
+            print(f"{loop[i]:18.3f}", end='')
+        print()
 
     # ----------------------------------------------------------------------
     #           FUNZIONI
@@ -658,7 +771,7 @@ def main():
     )
     parser.add_argument(
         "--mode",
-        choices=["timbir", "golden", "kturns", "multiturns"],
+        choices=["timbir", "golden", "kturns", "multiturns", "corput"],
         default="timbir",
     )
     parser.add_argument(
@@ -697,6 +810,12 @@ def main():
         scan.plot_equally_loops_polar_multiturns()
         scan.print_cumulative_angles_table_multiturns()
         scan.print_angles_table_multiturns()
+
+    elif args.mode == "corput":
+        scan.generate_interlaced_corput()
+        scan.plot_equally_loops_polar_corput()
+        scan.print_cumulative_angles_table_corput()
+        scan.print_angles_table_corput()
 
 
 
