@@ -273,7 +273,33 @@ class InterlacedScan:
 
         plt.show()
 
+    def print_angles_table_kturns(self, angles_all):
+    print(f"{'Idx':>5}", end='')
+    for k in range(len(angles_all)):
+        print(f"{f'Loop {k + 1} K-Turn':>15}", end='')  # aggiunto K-Turn
+    print()
+    for i in range(len(angles_all[0])):
+        print(f"{i:5}", end='')
+        for loop in angles_all:
+            print(f"{loop[i]:15.3f}", end='')
+        print()
 
+    def print_cumulative_angles_table_kturns(self, angles_all):
+    cumulative = [angles_all[0].copy()]
+    for k in range(1, len(angles_all)):
+        prev_max = cumulative[-1].max()
+        cumulative.append(angles_all[k] + np.ceil(prev_max / 360) * 360)
+
+    print(f"{'Idx':>5}", end='')
+    for k in range(len(cumulative)):
+        print(f"{f'Loop {k + 1} K-Turn':>18}", end='')  # aggiunto K-Turn
+    print()
+
+    for i in range(len(cumulative[0])):
+        print(f"{i:5}", end='')
+        for loop in cumulative:
+            print(f"{loop[i]:18.3f}", end='')
+        print()
 
     # ----------------------------------------------------------------------
     #   EQUALLY SPACED 
@@ -363,6 +389,34 @@ class InterlacedScan:
         ax.set_theta_direction(-1)
 
         plt.show()
+
+    def print_angles_table_multiturns(self, angles_all):
+    print(f"{'Idx':>5}", end='')
+    for k in range(len(angles_all)):
+        print(f"{f'Loop {k + 1} Multi-Turn':>18}", end='')  # aggiunto Multi-Turn
+    print()
+    for i in range(len(angles_all[0])):
+        print(f"{i:5}", end='')
+        for loop in angles_all:
+            print(f"{loop[i]:18.3f}", end='')
+        print()
+
+    def print_cumulative_angles_table_multiturns(self, angles_all):
+    cumulative = [angles_all[0].copy()]
+    for k in range(1, len(angles_all)):
+        prev_max = cumulative[-1].max()
+        cumulative.append(angles_all[k] + np.ceil(prev_max / 360) * 360)
+
+    print(f"{'Idx':>5}", end='')
+    for k in range(len(cumulative)):
+        print(f"{f'Loop {k + 1} Multi-Turn':>20}", end='')  # aggiunto Multi-Turn
+    print()
+
+    for i in range(len(cumulative[0])):
+        print(f"{i:5}", end='')
+        for loop in cumulative:
+            print(f"{loop[i]:20.3f}", end='')
+        print()
 
 
 
@@ -638,10 +692,14 @@ def main():
     elif args.mode == "kturns":
         scan.generate_interlaced_kturns()
         scan.plot_equally_loops_polar_kturns()
+        scan.print_cumulative_angles_table_kturns()
+        scan.print_angles_table_kturns()
         
     elif args.mode == "multiturns":
         scan.generate_interlaced_multiturns()
         scan.plot_equally_loops_polar_multiturns()
+        scan.print_cumulative_angles_table_multiturns()
+        scan.print_angles_table_multiturns()
 
 
 
