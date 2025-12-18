@@ -410,12 +410,15 @@ class InterlacedScan:
         bits = int(np.ceil(np.log2(self.num_angles)))
 
         for k in range(self.K_interlace):
-            indices = np.array([self.bit_reverse(i, bits) for i in range(self.num_angles)])
+            indices = np.array([self.bit_reverse(i, bits) for i in range(self.num_angles)])       #mescola indici 
             loop_angles = base[indices] + k * 360.0
             angles_all.append(loop_angles)
 
-        theta_unwrapped = np.concatenate(angles_all)
-        theta = np.mod(theta_unwrapped, 360.0)
+        theta_unwrapped__unsorted  = np.concatenate(angles_all)
+        theta_unsorted = np.mod(theta_unwrapped__unsorted, 360.0)
+
+        theta_unwrapped = np.sort(theta_unwrapped__unsorted)                           # perdo info ul loop specifico
+        theta = np.sort(theta_unsorted )
 
         self.theta_interlaced = np.array(theta)
         self.theta_interlaced_unwrapped = np.array(theta_unwrapped)
