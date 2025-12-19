@@ -397,7 +397,13 @@ class InterlacedScan:
     # =========================================================
     # VAN DER CORPUT INTERLACED – K-TURN
     # =========================================================
+    # =========================================================
     def generate_interlaced_corput(self, delta_theta=None):
+        '''ogni loop ha un offset diverso non sequenziale
+        e gli angoli mod 360 risultano diversi tra loop non ripetuti
+        '''
+
+        #  calcolo delta_theta (prima di usarlo negli offsets)
 
         if delta_theta is not None:
             delta_theta = float(delta_theta)
@@ -405,26 +411,62 @@ class InterlacedScan:
             delta_theta = (self.rotation_stop - self.rotation_start) / (self.num_angles - 1)
 
         self.rotation_step = delta_theta
+
+        # base angles (N campioni)
         base = self.rotation_start + np.arange(self.num_angles) * delta_theta
+
+        #  permutazione Corput per i LOOP (K) -> offsets non sequenziali
+        K = self.K_interlace
+        bitsK = int(np.ceil(np.log2(K)))
+        MK = 1 << bitsK
+
+        p_corput = np.array([self.bit_reverse(i, bitsK) for i in range(MK)])
+        p_corput = p_corput[p_corput < K]  # lunghezza K
+        assert len(p_corput) == K
+
+        # offset_k in [0, delta_theta) con passi delta_theta/K (tutti diversi)
+        offsets = (p_corput / K) * delta_theta
+
+        #  permutazione Corput (bit-reversal) per gli INDICI dentro ogni loop (N)
         angles_all = []
+
         bits = int(np.ceil(np.log2(self.num_angles)))
+        M = 1 << bits  # 2^bits
 
-        for k in range(self.K_interlace):
-            indices = np.array([self.bit_reverse(i, bits) for i in range(self.num_angles)])       #mescola indici 
-            loop_angles = base[indices] + k * 360.0
-            angles_all.append(loop_angles)
+        indices = np.array([self.bit_reverse(i, bits) for i in range(M)])
+        indices = indices[indices < self.num_angles]  # lunghezza = num_angles
 
-        theta_unwrapped__unsorted  = np.concatenate(angles_all)
-        theta_unsorted = np.mod(theta_unwrapped__unsorted, 360.0)
+        # genero i loop: stessi indici "Corput", ma offset diverso per loop
+        #    + unwrapped continua oltre 360 per moto reale
+        for k in range(K):
+            offset = offsets[k]
 
-        theta_unwrapped = np.sort(theta_unwrapped__unsorted)                           # perdo info ul loop specifico
-        theta = np.sort(theta_unsorted )
+            # angoli "casuali" (ordine corput) + offset frazionario
+            loop_angles = base[indices] + offset
 
-        self.theta_interlaced = np.array(theta)
-        self.theta_interlaced_unwrapped = np.array(theta_unwrapped)
+            # riporto in [rotation_start, rotation_start+360) (solo per il MOD)
+            loop_angles_mod = np.mod(loop_angles - self.rotation_start, 360.0) + self.rotation_start
+
+            # continuo oltre 360 per ogni loop (moto continuo)
+            loop_angles_unwrapped = loop_angles_mod + 360.0 * k
+
+            angles_all.append(loop_angles_unwrapped)
+
+        # -----------------------------------------------------
+        # 5) concateno + ordino (perdi ordine temporale, come vuoi tu)
+        # -----------------------------------------------------
+        theta_unwrapped__unsorted = np.concatenate(angles_all)
+
+        theta_unsorted = np.mod(theta_unwrapped__unsorted - self.rotation_start, 360.0) + self.rotation_start
+
+        theta_unwrapped = np.sort(theta_unwrapped__unsorted)  # crescente continuo
+        theta = np.sort(theta_unsorted)                       # crescente mod 360
+
+        self.theta_interlaced = np.array(theta)                      # ordinato crescente (mod 360)
+        self.theta_interlaced_unwrapped = np.array(theta_unwrapped)  # ordinato crescente (continuo)
 
         if self.K_interlace > 1:
-            self.rotation_stop = theta_unwrapped[-1]
+            self.rotation_stop = float(theta_unwrapped[-1])
 
         return angles_all
 
