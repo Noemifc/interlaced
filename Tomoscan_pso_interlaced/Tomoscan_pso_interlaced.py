@@ -704,7 +704,7 @@ class InterlacedScan:
         # resta in mod 360
         #self.PSOCountsIdeal = np.round(self.theta_interlaced * pulses_per_degree).astype(int)
 
-        self.PSOCountsIdeal = np.round(self.theta_interlaced_unwrapped * pulses_per_degree)
+        self.PSOCountsIdeal = np.round(self.theta_interlaced_unwrapped * pulses_per_degree).astype(int)
             
         #theta_real = posizione angolare del motore lungo la traiettoria taxi
         self.PSOCountsTaxiCorrected = np.round(self.theta_real * pulses_per_degree).astype(int)  # impulsi reali corretti
