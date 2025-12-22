@@ -689,18 +689,25 @@ class InterlacedScan:
 
     def compute_real_motion(self):
 
-        # self.t_real = np.interp(self.theta_interlaced_unwrapped, self.theta_vec, self.t_vec)
-        self.t_real = np.interp(self.theta_interlaced, self.theta_vec, self.t_vec)
+        self.t_real = np.interp(self.theta_interlaced_unwrapped, self.theta_vec, self.t_vec)
+        #self.t_real = np.interp(self.theta_interlaced, self.theta_vec, self.t_vec)
         self.theta_real = np.interp(self.t_real, self.t_vec, self.theta_vec)
+        ''' utilizzando unwrapped prendo gli angoli in multi tourn ma ordinati in senso crescente non in mod 360
+
+        '''
+
+   
 
     def convert_angles_to_counts(self):
 
         pulses_per_degree = self.PSOCountsPerRotation / 360.0
 
         self.PSOCountsIdeal = np.round(self.theta_interlaced * pulses_per_degree).astype(int)
-        self.PSOCountsTaxiCorrected = self.theta_real * pulses_per_degree
+        
+        #theta_real = posizione angolare del motore lungo la traiettoria taxi
+        self.PSOCountsTaxiCorrected = self.theta_real * pulses_per_degree      # impulsi reali corretti
 
-        self.PSOCountsFinal = self.PSOCountsTaxiCorrected.copy()
+        self.PSOCountsFinal = self.PSOCountsTaxiCorrected.copy()                # impulsi reali corretti
 
         pulse_counts = np.round(self.theta_interlaced / 360.0 * self.PSOCountsPerRotation).astype(int)
         actual_angles = pulse_counts / pulses_per_degree
