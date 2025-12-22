@@ -747,31 +747,34 @@ class InterlacedScan:
         plt.show()
 
     def plot(self):
+        pulses_per_degree = self.PSOCountsPerRotation / 360.0
+         # plot MOD 360 (angoli ordinati mod 360) 
         x1 = self.theta_interlaced
+        y1 = np.round(x1 * pulses_per_degree).astype(int)
+
+        # plot UNWRAPPED (angoli continui) 
         x2 = self.theta_interlaced_unwrapped
-        pulse_counts = np.round(self.theta_interlaced_unwrapped / 360.0 * self.PSOCountsPerRotation).astype(int)
-        y = pulse_counts
+        y2 = np.round(x2 * pulses_per_degree).astype(int)
 
-        fig, axs = plt.subplots(2, 1, figsize=(10, 8), sharey=True)
-
-        axs[0].plot(x1, y, 'o-', color='tab:blue', label='Impulsi vs Angolo')
-        axs[0].set_title('Angoli vs Impulsi encoder')
-        axs[0].set_xlabel('Angoli interlacciato [deg]')
+        fig, axs = plt.subplots(2, 1, figsize=(10, 8))
+        axs[0].plot(x1, y1, 'o-')
+        axs[0].set_title('MOD 360: Angolo vs Impulsi')
+        axs[0].set_xlabel('Angolo [deg]')
         axs[0].set_ylabel('Impulsi encoder')
         axs[0].grid(True)
-        axs[0].legend()
 
-        axs[1].plot(x2, y, 's-', color='tab:orange', label='Impulsi vs Angolo Unwrapped')
-        axs[1].set_title('Angoli TIMBIR Unwrapped vs Impulsi encoder')
-        axs[1].set_xlabel('Angolo interlacciato Unwrapped [deg]')
+        axs[1].plot(x2, y2, 's-')
+        axs[1].set_title('UNWRAPPED: Angolo vs Impulsi')
+        axs[1].set_xlabel('Angolo unwrapped [deg]')
         axs[1].set_ylabel('Impulsi encoder')
         axs[1].grid(True)
-        axs[1].legend()
 
         plt.tight_layout()
         plt.show()
 
+       
 
+    
 # ============================================================================
 def main():
     parser = argparse.ArgumentParser(description="Run interlaced scan simulation.")
