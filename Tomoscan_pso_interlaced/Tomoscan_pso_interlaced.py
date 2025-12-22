@@ -701,9 +701,11 @@ class InterlacedScan:
     def convert_angles_to_counts(self):
 
         pulses_per_degree = self.PSOCountsPerRotation / 360.0
+        # resta in mod 360
+        #self.PSOCountsIdeal = np.round(self.theta_interlaced * pulses_per_degree).astype(int)
 
-        self.PSOCountsIdeal = np.round(self.theta_interlaced * pulses_per_degree).astype(int)
-        
+        self.PSOCountsIdeal = round(self.theta_interlaced_unwrapped * pulses_per_degree)
+            
         #theta_real = posizione angolare del motore lungo la traiettoria taxi
         self.PSOCountsTaxiCorrected = self.theta_real * pulses_per_degree      # impulsi reali corretti
 
