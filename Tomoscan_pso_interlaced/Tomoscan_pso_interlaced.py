@@ -692,19 +692,22 @@ class InterlacedScan:
         self.t_real = np.interp(self.theta_interlaced_unwrapped, self.theta_vec, self.t_vec)
         #self.t_real = np.interp(self.theta_interlaced, self.theta_vec, self.t_vec)
         self.theta_real = np.interp(self.t_real, self.t_vec, self.theta_vec)
+        
         ''' utilizzando unwrapped prendo gli angoli in multi tourn ma ordinati in senso crescente non in mod 360
 
         '''
-
    
-
     def convert_angles_to_counts(self):
+        ''' valuta np.int64 per evitare overflow'''
 
         pulses_per_degree = self.PSOCountsPerRotation / 360.0
         # resta in mod 360
         #self.PSOCountsIdeal = np.round(self.theta_interlaced * pulses_per_degree).astype(int)
 
         self.PSOCountsIdeal = np.round(self.theta_interlaced_unwrapped * pulses_per_degree).astype(int)
+        # warning per avere certezza che gli angoli siano crescenti 
+        if np.any(np.diff(self.PSOCountsIdeal) <= 0):
+           print("WARNING: counts non strettamente crescenti (duplicati/inversioni).")
             
         #theta_real = posizione angolare del motore lungo la traiettoria taxi
         self.PSOCountsTaxiCorrected = np.round(self.theta_real * pulses_per_degree).astype(int)  # impulsi reali corretti
