@@ -50,16 +50,11 @@ class InterlacedScan:
     #   TIMBIR
     # ----------------------------------------------------------------------
     def generate_interlaced_timbir(self):
-        '''il fattore di interlacciamento K deve essere una potenza di due affinché l’operazione di
-        bit reversal produca una permutazione uniforme e completa degli indici di loop
-        i valori non binari di K introducono aliasing e distribuzioni non omogenee degli angoli
-        verificare i funzionamenti a vari k
-        '''
 
         bits = int(np.log2(self.K_interlace))
         theta = []
         group_indices = []
-        assert (self.K_interlace & (self.K_interlace - 1)) == 0   # bit rev definito su n fisso di bit
+        assert (self.K_interlace & (self.K_interlace - 1)) == 0   
 
         for n in range(self.num_angles):
             group = (n * self.K_interlace // self.num_angles) % self.K_interlace
@@ -399,11 +394,6 @@ class InterlacedScan:
     # =========================================================
     # =========================================================
     def generate_interlaced_corput(self, delta_theta=None):
-        '''ogni loop ha un offset diverso non sequenziale
-        e gli angoli mod 360 risultano diversi tra loop non ripetuti
-        '''
-
-        #  calcolo delta_theta (prima di usarlo negli offsets)
 
         if delta_theta is not None:
             delta_theta = float(delta_theta)
@@ -412,7 +402,7 @@ class InterlacedScan:
 
         self.rotation_step = delta_theta
 
-        # base angles (N campioni)
+        # base angles  
         base = self.rotation_start + np.arange(self.num_angles) * delta_theta
 
         #  permutazione Corput per i LOOP (K) -> offsets non sequenziali
@@ -453,7 +443,7 @@ class InterlacedScan:
             angles_all.append(loop_angles_unwrapped)
 
         # -----------------------------------------------------
-        # 5) concateno + ordino (perdi ordine temporale, come vuoi tu)
+        # 5) concateno + ordino 
         # -----------------------------------------------------
         theta_unwrapped__unsorted = np.concatenate(angles_all)
 
