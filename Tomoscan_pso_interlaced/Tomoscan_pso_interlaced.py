@@ -56,7 +56,7 @@ class InterlacedScan:
         group_indices = []
         assert (self.K_interlace & (self.K_interlace - 1)) == 0   
 
-        for n in range(self.num_angles):
+        for n in range(self.num_angles * self.K_interlace):
             group = (n * self.K_interlace // self.num_angles) % self.K_interlace
             group_br = self.bit_reverse(group, bits)
             idx = n * self.K_interlace + group_br
