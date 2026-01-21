@@ -125,8 +125,8 @@ class InterlacedScan:
         fig = plt.figure(figsize=(7, 7))
         ax = fig.add_subplot(111, polar=True)
         ax.set_title(
-            f"Multi-TIMBIR: N={self.num_angles} per loop, K={self.K_interlace} → totale N·K={self.num_angles*self.K_interlace} angoli unici in [0,360°)\n"
-            f"Loop su cerchi separati (ordine loop = bit-reversal)", 
+            f"Multi-TIMBIR: N={self.num_angles} per loop, K={self.K_interlace} → totale N·K={self.num_angles*self.K_interlace} angoli  \n"
+            f"Loop su cerchi separati con ordine loop = bit-reversal", 
             va='bottom', fontsize=12
         )
         ax.plot(np.deg2rad(theta), radii, '-o', lw=1.2, ms=5, alpha=0.8)
@@ -852,7 +852,7 @@ def main():
     if args.mode == "timbir":
         scan.generate_interlaced_timbir()
 
-    elif ars.mode == "multitimbir":
+    elif args.mode == "multitimbir":
         scan.generate_interlaced_multitimbir()
 
     elif args.mode == "golden":
