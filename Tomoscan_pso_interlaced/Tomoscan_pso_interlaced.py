@@ -90,6 +90,56 @@ class InterlacedScan:
         return int(f"{n:0{bits}b}"[::-1], 2)
 
     # unwrap solo per analisi temporale, non rappresenta traiettoria fisica reale
+    
+     #*******************************************************************************
+    # ----------------------------------------------------------------------
+    #   multi 
+        TIMBIR
+    # ----------------------------------------------------------------------
+    def generate_interlaced_multitimbir(self):
+
+        bits = int(np.log2(self.K_interlace))
+        theta = []
+        group_indices = []
+        assert (self.K_interlace & (self.K_interlace - 1)) == 0   
+
+        for n in range(self.num_angles):
+            group = (n * self.K_interlace // self.num_angles) % self.K_interlace
+            group_br = self.bit_reverse(group, bits)
+            idx = n * self.K_interlace + group_br
+            angle_deg = (idx % self.num_angles) * 360.0 / self.num_angles
+            theta.append(angle_deg)
+            group_indices.append(group)
+
+        self.theta_interlaced = np.sort(theta)
+        self.theta_interlaced_unwrapped = np.rad2deg(np.unwrap(np.deg2rad(theta)))
+
+        group_indices = np.array(group_indices)
+        radii = 1 - group_indices * 0.15
+
+        fig = plt.figure(figsize=(7, 7))
+        ax = fig.add_subplot(111, polar=True)
+        ax.set_title(
+            f"TIMBIR Interlaced Acquisition (N={self.num_angles} - K={self.K_interlace})\nEach loop on its own circle",
+            va='bottom', fontsize=13
+        )
+
+        ax.plot(np.deg2rad(theta), radii, '-o', lw=1.2, ms=5, alpha=0.8, color='tab:blue')
+
+        for i in range(self.num_angles):
+            ax.text(theta[i], radii[i] + 0.03,
+                    str(group_indices[i] + 1), ha='center', va='bottom', fontsize=8)
+
+        ax.set_rticks([])
+        plt.show()
+
+    def bit_reverse(self, n, bits):
+        return int(f"{n:0{bits}b}"[::-1], 2)
+
+ #*******************************************************************************
+
+
+    
 
     # ----------------------------------------------------------------------
     #   GOLDEN ANGLE
@@ -782,7 +832,7 @@ def main():
     parser = argparse.ArgumentParser(description="Run interlaced scan simulation.")
     parser.add_argument("--num_angles", type=int, default=32, help="Number of angles (default: 32)")
     parser.add_argument("--K_interlace", type=int, default=4, help="Interlace factor K (default: 4)")
-    parser.add_argument("--mode", choices=["timbir", "golden", "kturns", "multiturns", "corput"], default="timbir")
+    parser.add_argument("--mode", choices=["timbir", "golden", "kturns", "multiturns", "corput", "multitimbir"], default="timbir")
     parser.add_argument("--PSOCountsPerRotation", type=int, default=20, help="PSO counts per rotation (default: 20)")
 
     args = parser.parse_args()
@@ -796,6 +846,9 @@ def main():
     # select method
     if args.mode == "timbir":
         scan.generate_interlaced_timbir()
+
+    elif ars.mode == "multitimbir":
+        scan.generate_interlaced_multitimbir()
 
     elif args.mode == "golden":
         angles_all = scan.generate_interlaced_goldenangle()
