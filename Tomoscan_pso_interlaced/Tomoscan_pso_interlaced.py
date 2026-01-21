@@ -113,30 +113,33 @@ class InterlacedScan:
                 theta.append(angle_deg)
                 group_indices.append(loop)
               
-        self.theta_interlaced = np.sort(theta)
-        self.theta_interlaced_unwrapped = np.rad2deg(np.unwrap(np.deg2rad(theta)))
-
-        group_indices = np.array(group_indices)
-        radii = 1 - group_indices * 0.15
+        self.theta_interlaced = np.sort(theta)  # angoli ordinati
+        self.theta_interlaced_unwrapped = np.rad2deg(np.unwrap(np.deg2rad(theta)))  # seq acq nel tempo
+        
+        theta = np.array(theta, dtype=float)
+        group_indices = np.array(group_indices, dtype=int)
+# Cerchi separati per loop (step adattivo così non vai sotto zero se self.K_interlace è grande)
+        step = 0.8 / max(self.K_interlace - 1, 1)
+        radii = 1.0 - group_indices * step
 
         fig = plt.figure(figsize=(7, 7))
         ax = fig.add_subplot(111, polar=True)
         ax.set_title(
-            f"TIMBIR Interlaced Acquisition (N={self.num_angles} - K={self.K_interlace})\nEach loop on its own circle",
-            va='bottom', fontsize=13
+            f"Multi-TIMBIR: N={self.num_angles} per loop, K={self.K_interlace} → totale N·K={self.num_angles*self.K_interlace} angoli unici in [0,360°)\n"
+            f"Loop su cerchi separati (ordine loop = bit-reversal)", 
+            va='bottom', fontsize=12
         )
+        ax.plot(np.deg2rad(theta), radii, '-o', lw=1.2, ms=5, alpha=0.8)
 
-        ax.plot(np.deg2rad(theta), radii, '-o', lw=1.2, ms=5, alpha=0.8, color='tab:blue')
-
-        for i in range(self.num_angles):
-            ax.text(theta[i], radii[i] + 0.03,
-                    str(group_indices[i] + 1), ha='center', va='bottom', fontsize=8)
-
+        for ang, r, lp in zip(theta, radii, group_indices):
+            ax.text(np.deg2rad(ang), r + 0.03, str(lp + 1),
+                    ha='center', va='bottom', fontsize=8)
         ax.set_rticks([])
         plt.show()
 
-    def bit_reverse(self, n, bits):
-        return int(f"{n:0{bits}b}"[::-1], 2)
+
+
+ 
 
  #*******************************************************************************
 
