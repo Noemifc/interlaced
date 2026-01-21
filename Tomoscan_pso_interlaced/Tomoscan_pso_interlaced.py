@@ -94,7 +94,7 @@ class InterlacedScan:
      #*******************************************************************************
     # ----------------------------------------------------------------------
     #   multi 
-        TIMBIR
+        #TIMBIR
     # ----------------------------------------------------------------------
     def generate_interlaced_multitimbir(self):
 
@@ -102,15 +102,17 @@ class InterlacedScan:
         theta = []
         group_indices = []
         assert (self.K_interlace & (self.K_interlace - 1)) == 0   
+        # i = indice nel loop da 0 a num_angles 
+        # g = indice temporale nel loop  da 0 a K loops
 
-        for n in range(self.num_angles):
-            group = (n * self.K_interlace // self.num_angles) % self.K_interlace
-            group_br = self.bit_reverse(group, bits)
-            idx = n * self.K_interlace + group_br
-            angle_deg = (idx % self.num_angles) * 360.0 / self.num_angles
-            theta.append(angle_deg)
-            group_indices.append(group)
-
+        for i in range(self.num_angles):
+            for g in range(self.K_interlace):
+                loop = self.bit_reverse(g, bits) #ordine temporale da 0 a K-1 permutato 
+                idx = i * self.self.K_interlace + loop   # 0 a self.num_angles*self.K_interlace-1 , angoli unici 
+                angle_deg = idx * 360.0 / (self.num_angles * self.K_interlace)     # formula theta= 360\N*K (iK+bitrev)
+                theta.append(angle_deg)
+                group_indices.append(loop)
+              
         self.theta_interlaced = np.sort(theta)
         self.theta_interlaced_unwrapped = np.rad2deg(np.unwrap(np.deg2rad(theta)))
 
