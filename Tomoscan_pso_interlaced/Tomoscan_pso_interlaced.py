@@ -118,7 +118,7 @@ class InterlacedScan:
         
         theta = np.array(theta, dtype=float)
         group_indices = np.array(group_indices, dtype=int)
-# Cerchi separati per loop (step adattivo così non vai sotto zero se self.K_interlace è grande)
+        # Cerchi separati per loop  
         step = 0.8 / max(self.K_interlace - 1, 1)
         radii = 1.0 - group_indices * step
 
@@ -752,7 +752,7 @@ class InterlacedScan:
         self.PSOCountsIdeal = np.round(self.theta_interlaced_unwrapped * pulses_per_degree).astype(int)
         # warning per avere certezza che gli angoli siano crescenti 
         if np.any(np.diff(self.PSOCountsIdeal) <= 0):
-           print("WARNING: counts non strettamente crescenti (duplicati/inversioni).")
+            print("WARNING: counts non strettamente crescenti (duplicati/inversioni).")
             
         #theta_real = posizione angolare del motore lungo la traiettoria taxi
         self.PSOCountsTaxiCorrected = np.round(self.theta_real * pulses_per_degree).astype(int)  # impulsi reali corretti
