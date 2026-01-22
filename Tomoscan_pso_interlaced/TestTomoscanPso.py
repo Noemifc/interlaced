@@ -6,10 +6,6 @@ import argparse
 import os
 from datetime import datetime
 
-
-
-
-
 # ============================================================================
 #                     CLASSE INTERLACED SCAN
 # ============================================================================
@@ -32,10 +28,10 @@ class InterlacedScan:
                  K_interlace=5):
 
         # Parametri di scansione
-        self.rotation_start = rotation_start  # angolo iniziale della scansione
-        self.rotation_stop = rotation_stop    # angolo finale della scansione
-        self.num_angles = num_angles          # num proiezioni
-        self.K_interlace = K_interlace        # nuovo pv
+        self.rotation_start = rotation_start
+        self.rotation_stop = rotation_stop
+        self.num_angles = num_angles
+        self.K_interlace = K_interlace
 
         # Parametri hardware
         self.PSOCountsPerRotation = PSOCountsPerRotation
@@ -52,249 +48,230 @@ class InterlacedScan:
 
     ############################################################ MODE ####################################################################
 
-# ----------------------------------------------------------------------
-#   TIMBIR
-# ----------------------------------------------------------------------
-def generate_interlaced_timbir(self):
+    # ----------------------------------------------------------------------
+    #   TIMBIR
+    # ----------------------------------------------------------------------
+    def generate_interlaced_timbir(self):
 
-    bits = int(np.log2(self.K_interlace)) if self.K_interlace > 1 else 0
-    theta = []
-    group_indices = []
-    group_br_list = []
-    idx_list = []
+        bits = int(np.log2(self.K_interlace)) if self.K_interlace > 1 else 0
+        theta = []
+        group_indices = []
+        group_br_list = []
+        idx_list = []
 
-    assert (self.K_interlace & (self.K_interlace - 1)) == 0
+        assert (self.K_interlace & (self.K_interlace - 1)) == 0
 
-    for n in range(self.num_angles):
-        group = (n * self.K_interlace // self.num_angles) % self.K_interlace
-        group_br = self.bit_reverse(group, bits)
-        idx = n * self.K_interlace + group_br
-        angle_deg = (idx % self.num_angles) * 360.0 / self.num_angles
-
-        theta.append(angle_deg)
-        group_indices.append(group)
-        group_br_list.append(group_br)
-        idx_list.append(idx)
-
-    # --- Salvo in attributi "dedicati" TIMBIR (acq order)
-    self.theta_timbir_acq = np.array(theta, dtype=float)
-    self.theta_timbir_acq_unwrapped = np.rad2deg(np.unwrap(np.deg2rad(self.theta_timbir_acq)))
-    self.group_timbir = np.array(group_indices, dtype=int)
-    self.group_br_timbir = np.array(group_br_list, dtype=int)
-    self.idx_timbir = np.array(idx_list, dtype=int)
-
-    # --- Se ti servono ancora questi per plot/altro
-    self.theta_interlaced = np.sort(theta)
-    self.theta_interlaced_unwrapped = np.rad2deg(np.unwrap(np.deg2rad(theta)))
-
-    group_indices = np.array(group_indices)
-    radii = 1 - group_indices * 0.15
-
-    import matplotlib.pyplot as plt
-    fig = plt.figure(figsize=(7, 7))
-    ax = fig.add_subplot(111, polar=True)
-    ax.set_title(
-        f"TIMBIR Interlaced Acquisition (N={self.num_angles} - K={self.K_interlace})\nEach loop on its own circle",
-        va='bottom', fontsize=13
-    )
-
-    ax.plot(np.deg2rad(theta), radii, '-o', lw=1.2, ms=5, alpha=0.8, color='tab:blue')
-
-    for i in range(self.num_angles):
-        ax.text(np.deg2rad(theta[i]), radii[i] + 0.03,
-                str(group_indices[i] + 1), ha='center', va='bottom', fontsize=8)
-
-    ax.set_rticks([])
-    plt.show()
-
-
-def print_delta_angles_timbir(self, out_dir="angles_out", print_first=20):
-    """
-    Salva:
-      - CSV in ordine di acquisizione con angoli (wrapped/unwrapped) e delta tra step consecutivi
-      - CSV con angoli ordinati (0..360) e delta ciclico tra vicini
-    """
-    if not hasattr(self, "theta_timbir_acq"):
-        raise RuntimeError("Prima chiama generate_interlaced_timbir(), poi print_delta_angles_timbir().")
-
-    os.makedirs(out_dir, exist_ok=True)
-    ts = datetime.now().strftime("%Y%m%d_%H%M%S")
-
-    ang_w = self.theta_timbir_acq % 360.0
-    ang_u = self.theta_timbir_acq_unwrapped
-
-    # delta tra acquisizioni consecutive (unwrapped): lunghezza N-1
-    delta_u = np.diff(ang_u)
-    delta_u_full = np.concatenate([delta_u, [np.nan]])  # allineo alla lunghezza N
-
-    # CSV acquisizione
-    acq_path = os.path.join(out_dir, f"timbir_acq_angles_N{self.num_angles}_K{self.K_interlace}_{ts}.csv")
-    header = "n,angle_deg_wrapped,angle_deg_unwrapped,delta_next_deg_unwrapped,group,group_br,idx"
-    data = np.column_stack([
-        np.arange(len(ang_w)),
-        ang_w,
-        ang_u,
-        delta_u_full,
-        self.group_timbir,
-        self.group_br_timbir,
-        self.idx_timbir
-    ])
-    np.savetxt(acq_path, data, delimiter=",", header=header, comments="", fmt="%.10g")
-
-    # CSV ordinato (gap ciclici)
-    ang_sorted = np.sort(ang_w)
-    delta_sorted = np.diff(ang_sorted, append=ang_sorted[0] + 360.0)
-    sort_path = os.path.join(out_dir, f"timbir_sorted_deltas_N{self.num_angles}_K{self.K_interlace}_{ts}.csv")
-    header2 = "k,angle_deg_sorted,delta_to_next_deg_cyclic"
-    data2 = np.column_stack([np.arange(len(ang_sorted)), ang_sorted, delta_sorted])
-    np.savetxt(sort_path, data2, delimiter=",", header=header2, comments="", fmt="%.10g")
-
-    # stampa rapida
-    print(f"[TIMBIR] Salvato: {acq_path}")
-    print(f"[TIMBIR] Salvato: {sort_path}")
-
-    print("\n[TIMBIR] Prime righe (acq order):")
-    for i in range(min(print_first, len(ang_w))):
-        print(f"  n={i:3d}  ang(w)={ang_w[i]:9.4f}°  ang(u)={ang_u[i]:9.4f}°  Δnext={delta_u_full[i]:9.4f}°  group={self.group_timbir[i]}  br={self.group_br_timbir[i]}")
-
-    # stats delta
-    finite_du = delta_u[np.isfinite(delta_u)]
-    print("\n[TIMBIR] Stat Δ (acq, unwrapped):",
-          f"min={np.min(finite_du):.6g}°  max={np.max(finite_du):.6g}°  mean={np.mean(finite_du):.6g}°  std={np.std(finite_du):.6g}°")
-
-
-def bit_reverse(self, n, bits):
-    return int(f"{n:0{bits}b}"[::-1], 2)
-
-
-# ----------------------------------------------------------------------
-#   Multi-TIMBIR
-# ----------------------------------------------------------------------
-def generate_interlaced_multitimbir(self):
-
-    bits = int(np.log2(self.K_interlace)) if self.K_interlace > 1 else 0
-    theta = []
-    group_indices = []
-    i_list = []
-    g_list = []
-    idx_list = []
-
-    assert (self.K_interlace & (self.K_interlace - 1)) == 0
-
-    for i in range(self.num_angles):
-        for g in range(self.K_interlace):
-            loop = self.bit_reverse(g, bits)  # ordine temporale permutato
-            idx = i * self.K_interlace + loop
-            angle_deg = idx * 360.0 / (self.num_angles * self.K_interlace)
+        for n in range(self.num_angles):
+            group = (n * self.K_interlace // self.num_angles) % self.K_interlace
+            group_br = self.bit_reverse(group, bits)
+            idx = n * self.K_interlace + group_br
+            angle_deg = (idx % self.num_angles) * 360.0 / self.num_angles
 
             theta.append(angle_deg)
-            group_indices.append(loop)
-            i_list.append(i)
-            g_list.append(g)
+            group_indices.append(group)
+            group_br_list.append(group_br)
             idx_list.append(idx)
 
-    # --- Salvo in attributi "dedicati" MULTI-TIMBIR (acq order)
-    self.theta_multitimbir_acq = np.array(theta, dtype=float)
-    self.theta_multitimbir_acq_unwrapped = np.rad2deg(np.unwrap(np.deg2rad(self.theta_multitimbir_acq)))
-    self.loop_multitimbir = np.array(group_indices, dtype=int)
-    self.i_multitimbir = np.array(i_list, dtype=int)
-    self.g_multitimbir = np.array(g_list, dtype=int)
-    self.idx_multitimbir = np.array(idx_list, dtype=int)
+        # --- Salvo in attributi "dedicati" TIMBIR (acq order)
+        self.theta_timbir_acq = np.array(theta, dtype=float)
+        self.theta_timbir_acq_unwrapped = np.rad2deg(np.unwrap(np.deg2rad(self.theta_timbir_acq)))
+        self.group_timbir = np.array(group_indices, dtype=int)
+        self.group_br_timbir = np.array(group_br_list, dtype=int)
+        self.idx_timbir = np.array(idx_list, dtype=int)
 
-    # --- Se ti servono ancora questi
-    self.theta_interlaced = np.sort(theta)
-    self.theta_interlaced_unwrapped = np.rad2deg(np.unwrap(np.deg2rad(theta)))
+        # --- Se ti servono ancora questi per plot/altro
+        self.theta_interlaced = np.sort(theta)
+        self.theta_interlaced_unwrapped = np.rad2deg(np.unwrap(np.deg2rad(theta)))
 
-    theta = np.array(theta, dtype=float)
-    group_indices = np.array(group_indices, dtype=int)
+        group_indices = np.array(group_indices)
+        radii = 1 - group_indices * 0.15
 
-    step = 0.8 / max(self.K_interlace - 1, 1)
-    radii = 1.0 - group_indices * step
+        fig = plt.figure(figsize=(7, 7))
+        ax = fig.add_subplot(111, polar=True)
+        ax.set_title(
+            f"TIMBIR Interlaced Acquisition (N={self.num_angles} - K={self.K_interlace})\nEach loop on its own circle",
+            va='bottom', fontsize=13
+        )
 
-    import matplotlib.pyplot as plt
-    fig = plt.figure(figsize=(7, 7))
-    ax = fig.add_subplot(111, polar=True)
-    ax.set_title(
-        f"Multi-TIMBIR: N={self.num_angles} per loop, K={self.K_interlace} → totale N·K={self.num_angles*self.K_interlace} angoli  \n"
-        f"Loop su cerchi separati con ordine loop = bit-reversal",
-        va='bottom', fontsize=12
-    )
-    ax.plot(np.deg2rad(theta), radii, '-o', lw=1.2, ms=5, alpha=0.8)
+        ax.plot(np.deg2rad(theta), radii, '-o', lw=1.2, ms=5, alpha=0.8, color='tab:blue')
 
-    for ang, r, lp in zip(theta, radii, group_indices):
-        ax.text(np.deg2rad(ang), r + 0.03, str(lp + 1),
-                ha='center', va='bottom', fontsize=8)
-    ax.set_rticks([])
-    plt.show()
+        for i in range(self.num_angles):
+            ax.text(np.deg2rad(theta[i]), radii[i] + 0.03,
+                    str(group_indices[i] + 1), ha='center', va='bottom', fontsize=8)
 
+        ax.set_rticks([])
+        plt.show()
 
-def print_delta_angles_multitimbir(self, out_dir="angles_out", print_first=20):
-    """
-    Salva:
-      - CSV in ordine di acquisizione con angoli (wrapped/unwrapped) e delta tra step consecutivi
-      - CSV con angoli ordinati (0..360) e delta ciclico tra vicini
-    """
-    if not hasattr(self, "theta_multitimbir_acq"):
-        raise RuntimeError("Prima chiama generate_interlaced_multitimbir(), poi print_delta_angles_multitimbir().")
+    def print_delta_angles_timbir(self, out_dir="angles_out", print_first=20):
+        """
+        Salva:
+          - CSV in ordine di acquisizione con angoli (wrapped/unwrapped) e delta tra step consecutivi
+          - CSV con angoli ordinati (0..360) e delta ciclico tra vicini
+        """
+        if not hasattr(self, "theta_timbir_acq"):
+            raise RuntimeError("Prima chiama generate_interlaced_timbir(), poi print_delta_angles_timbir().")
 
-    os.makedirs(out_dir, exist_ok=True)
-    ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+        os.makedirs(out_dir, exist_ok=True)
+        ts = datetime.now().strftime("%Y%m%d_%H%M%S")
 
-    ang_w = self.theta_multitimbir_acq % 360.0
-    ang_u = self.theta_multitimbir_acq_unwrapped
+        ang_w = self.theta_timbir_acq % 360.0
+        ang_u = self.theta_timbir_acq_unwrapped
 
-    delta_u = np.diff(ang_u)
-    delta_u_full = np.concatenate([delta_u, [np.nan]])
+        delta_u = np.diff(ang_u)
+        delta_u_full = np.concatenate([delta_u, [np.nan]])
 
-    # CSV acquisizione
-    acq_path = os.path.join(out_dir, f"multitimbir_acq_angles_N{self.num_angles}_K{self.K_interlace}_{ts}.csv")
-    header = "n,i,g,loop_bitrev,idx,angle_deg_wrapped,angle_deg_unwrapped,delta_next_deg_unwrapped"
-    data = np.column_stack([
-        np.arange(len(ang_w)),
-        self.i_multitimbir,
-        self.g_multitimbir,
-        self.loop_multitimbir,
-        self.idx_multitimbir,
-        ang_w,
-        ang_u,
-        delta_u_full
-    ])
-    np.savetxt(acq_path, data, delimiter=",", header=header, comments="", fmt="%.10g")
+        acq_path = os.path.join(out_dir, f"timbir_acq_angles_N{self.num_angles}_K{self.K_interlace}_{ts}.csv")
+        header = "n,angle_deg_wrapped,angle_deg_unwrapped,delta_next_deg_unwrapped,group,group_br,idx"
+        data = np.column_stack([
+            np.arange(len(ang_w)),
+            ang_w,
+            ang_u,
+            delta_u_full,
+            self.group_timbir,
+            self.group_br_timbir,
+            self.idx_timbir
+        ])
+        np.savetxt(acq_path, data, delimiter=",", header=header, comments="", fmt="%.10g")
 
-    # CSV ordinato (gap ciclici)
-    ang_sorted = np.sort(ang_w)
-    delta_sorted = np.diff(ang_sorted, append=ang_sorted[0] + 360.0)
-    sort_path = os.path.join(out_dir, f"multitimbir_sorted_deltas_N{self.num_angles}_K{self.K_interlace}_{ts}.csv")
-    header2 = "k,angle_deg_sorted,delta_to_next_deg_cyclic"
-    data2 = np.column_stack([np.arange(len(ang_sorted)), ang_sorted, delta_sorted])
-    np.savetxt(sort_path, data2, delimiter=",", header=header2, comments="", fmt="%.10g")
+        ang_sorted = np.sort(ang_w)
+        delta_sorted = np.diff(ang_sorted, append=ang_sorted[0] + 360.0)
+        sort_path = os.path.join(out_dir, f"timbir_sorted_deltas_N{self.num_angles}_K{self.K_interlace}_{ts}.csv")
+        header2 = "k,angle_deg_sorted,delta_to_next_deg_cyclic"
+        data2 = np.column_stack([np.arange(len(ang_sorted)), ang_sorted, delta_sorted])
+        np.savetxt(sort_path, data2, delimiter=",", header=header2, comments="", fmt="%.10g")
 
-    print(f"[Multi-TIMBIR] Salvato: {acq_path}")
-    print(f"[Multi-TIMBIR] Salvato: {sort_path}")
+        print(f"[TIMBIR] Salvato: {acq_path}")
+        print(f"[TIMBIR] Salvato: {sort_path}")
 
-    print("\n[Multi-TIMBIR] Prime righe (acq order):")
-    for i in range(min(print_first, len(ang_w))):
-        print(f"  n={i:3d}  i={self.i_multitimbir[i]:3d} g={self.g_multitimbir[i]:2d} loop={self.loop_multitimbir[i]:2d}  "
-              f"ang(w)={ang_w[i]:9.4f}°  ang(u)={ang_u[i]:9.4f}°  Δnext={delta_u_full[i]:9.4f}°")
+        print("\n[TIMBIR] Prime righe (acq order):")
+        for i in range(min(print_first, len(ang_w))):
+            print(f"  n={i:3d}  ang(w)={ang_w[i]:9.4f}°  ang(u)={ang_u[i]:9.4f}°  "
+                  f"Δnext={delta_u_full[i]:9.4f}°  group={self.group_timbir[i]}  br={self.group_br_timbir[i]}")
 
-    finite_du = delta_u[np.isfinite(delta_u)]
-    print("\n[Multi-TIMBIR] Stat Δ (acq, unwrapped):",
-          f"min={np.min(finite_du):.6g}°  max={np.max(finite_du):.6g}°  mean={np.mean(finite_du):.6g}°  std={np.std(finite_du):.6g}°")
+        finite_du = delta_u[np.isfinite(delta_u)]
+        print("\n[TIMBIR] Stat Δ (acq, unwrapped):",
+              f"min={np.min(finite_du):.6g}°  max={np.max(finite_du):.6g}°  mean={np.mean(finite_du):.6g}°  std={np.std(finite_du):.6g}°")
 
- 
+    def bit_reverse(self, n, bits):
+        return int(f"{n:0{bits}b}"[::-1], 2)
 
- #*******************************************************************************
+    # ----------------------------------------------------------------------
+    #   Multi-TIMBIR
+    # ----------------------------------------------------------------------
+    def generate_interlaced_multitimbir(self):
 
+        bits = int(np.log2(self.K_interlace)) if self.K_interlace > 1 else 0
+        theta = []
+        group_indices = []
+        i_list = []
+        g_list = []
+        idx_list = []
 
-    
+        assert (self.K_interlace & (self.K_interlace - 1)) == 0
 
+        for i in range(self.num_angles):
+            for g in range(self.K_interlace):
+                loop = self.bit_reverse(g, bits)
+                idx = i * self.K_interlace + loop
+                angle_deg = idx * 360.0 / (self.num_angles * self.K_interlace)
+
+                theta.append(angle_deg)
+                group_indices.append(loop)
+                i_list.append(i)
+                g_list.append(g)
+                idx_list.append(idx)
+
+        self.theta_multitimbir_acq = np.array(theta, dtype=float)
+        self.theta_multitimbir_acq_unwrapped = np.rad2deg(np.unwrap(np.deg2rad(self.theta_multitimbir_acq)))
+        self.loop_multitimbir = np.array(group_indices, dtype=int)
+        self.i_multitimbir = np.array(i_list, dtype=int)
+        self.g_multitimbir = np.array(g_list, dtype=int)
+        self.idx_multitimbir = np.array(idx_list, dtype=int)
+
+        self.theta_interlaced = np.sort(theta)
+        self.theta_interlaced_unwrapped = np.rad2deg(np.unwrap(np.deg2rad(theta)))
+
+        theta = np.array(theta, dtype=float)
+        group_indices = np.array(group_indices, dtype=int)
+
+        step = 0.8 / max(self.K_interlace - 1, 1)
+        radii = 1.0 - group_indices * step
+
+        fig = plt.figure(figsize=(7, 7))
+        ax = fig.add_subplot(111, polar=True)
+        ax.set_title(
+            f"Multi-TIMBIR: N={self.num_angles} per loop, K={self.K_interlace} → totale N·K={self.num_angles*self.K_interlace} angoli\n"
+            f"Loop su cerchi separati con ordine loop = bit-reversal",
+            va='bottom', fontsize=12
+        )
+        ax.plot(np.deg2rad(theta), radii, '-o', lw=1.2, ms=5, alpha=0.8)
+
+        for ang, r, lp in zip(theta, radii, group_indices):
+            ax.text(np.deg2rad(ang), r + 0.03, str(lp + 1),
+                    ha='center', va='bottom', fontsize=8)
+
+        ax.set_rticks([])
+        plt.show()
+
+    def print_delta_angles_multitimbir(self, out_dir="angles_out", print_first=20):
+        """
+        Salva:
+          - CSV in ordine di acquisizione con angoli (wrapped/unwrapped) e delta tra step consecutivi
+          - CSV con angoli ordinati (0..360) e delta ciclico tra vicini
+        """
+        if not hasattr(self, "theta_multitimbir_acq"):
+            raise RuntimeError("Prima chiama generate_interlaced_multitimbir(), poi print_delta_angles_multitimbir().")
+
+        os.makedirs(out_dir, exist_ok=True)
+        ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+
+        ang_w = self.theta_multitimbir_acq % 360.0
+        ang_u = self.theta_multitimbir_acq_unwrapped
+
+        delta_u = np.diff(ang_u)
+        delta_u_full = np.concatenate([delta_u, [np.nan]])
+
+        acq_path = os.path.join(out_dir, f"multitimbir_acq_angles_N{self.num_angles}_K{self.K_interlace}_{ts}.csv")
+        header = "n,i,g,loop_bitrev,idx,angle_deg_wrapped,angle_deg_unwrapped,delta_next_deg_unwrapped"
+        data = np.column_stack([
+            np.arange(len(ang_w)),
+            self.i_multitimbir,
+            self.g_multitimbir,
+            self.loop_multitimbir,
+            self.idx_multitimbir,
+            ang_w,
+            ang_u,
+            delta_u_full
+        ])
+        np.savetxt(acq_path, data, delimiter=",", header=header, comments="", fmt="%.10g")
+
+        ang_sorted = np.sort(ang_w)
+        delta_sorted = np.diff(ang_sorted, append=ang_sorted[0] + 360.0)
+        sort_path = os.path.join(out_dir, f"multitimbir_sorted_deltas_N{self.num_angles}_K{self.K_interlace}_{ts}.csv")
+        header2 = "k,angle_deg_sorted,delta_to_next_deg_cyclic"
+        data2 = np.column_stack([np.arange(len(ang_sorted)), ang_sorted, delta_sorted])
+        np.savetxt(sort_path, data2, delimiter=",", header=header2, comments="", fmt="%.10g")
+
+        print(f"[Multi-TIMBIR] Salvato: {acq_path}")
+        print(f"[Multi-TIMBIR] Salvato: {sort_path}")
+
+        print("\n[Multi-TIMBIR] Prime righe (acq order):")
+        for i in range(min(print_first, len(ang_w))):
+            print(f"  n={i:3d}  i={self.i_multitimbir[i]:3d} g={self.g_multitimbir[i]:2d} loop={self.loop_multitimbir[i]:2d}  "
+                  f"ang(w)={ang_w[i]:9.4f}°  ang(u)={ang_u[i]:9.4f}°  Δnext={delta_u_full[i]:9.4f}°")
+
+        finite_du = delta_u[np.isfinite(delta_u)]
+        print("\n[Multi-TIMBIR] Stat Δ (acq, unwrapped):",
+              f"min={np.min(finite_du):.6g}°  max={np.max(finite_du):.6g}°  mean={np.mean(finite_du):.6g}°  std={np.std(finite_du):.6g}°")
+
+    #*******************************************************************************
     # ----------------------------------------------------------------------
     #   GOLDEN ANGLE
     # ----------------------------------------------------------------------
     def generate_interlaced_goldenangle(self):
 
         golden_angle = 360 * (3 - np.sqrt(5)) / 2
-        phi_inv = (np.sqrt(5) - 1) / 2  # utile per offests
+        phi_inv = (np.sqrt(5) - 1) / 2
 
         angles_all = []
 
@@ -318,6 +295,7 @@ def print_delta_angles_multitimbir(self, out_dir="angles_out", print_first=20):
 
         return angles_all
 
+    # ... (tutto il resto dei tuoi metodi resta uguale e già indentato correttamente)
     # ----------------------------------------------------------------------
     # Tabelle e plot Golden
     # ----------------------------------------------------------------------
@@ -333,647 +311,9 @@ def print_delta_angles_multitimbir(self, out_dir="angles_out", print_first=20):
                 print(f"{loop[i]:12.3f}", end='')
             print()
 
-    def print_cumulative_angles_table(self, angles_all):
-        cumulative = [angles_all[0].copy()]
+    # ... continua con i tuoi metodi già corretti ...
 
-        for k in range(1, len(angles_all)):
-            prev_max = cumulative[-1].max()
-            cumulative.append(angles_all[k] + np.ceil(prev_max / 360) * 360)
 
-        print(f"{'Idx':>5}", end='')
-        for k in range(len(cumulative)):
-            print(f"{f'Loop {k + 1}':>15}", end='')
-        print()
-
-        for i in range(len(cumulative[0])):
-            print(f"{i:5}", end='')
-            for loop in cumulative:
-                print(f"{loop[i]:15.3f}", end='')
-            print()
-
-    def plot_interlaced_circles(self, angles_all):
-        fig = plt.figure(figsize=(8, 8))
-        ax = fig.add_subplot(111, polar=True)
-
-        for k, angles in enumerate(angles_all):
-            r = np.full_like(angles, 1 - k * 0.15)
-            ax.plot(np.deg2rad(angles), r, 'o-', label=f'Loop {k + 1}')
-
-        ax.set_rticks([])
-        ax.set_theta_zero_location('N')
-        ax.set_theta_direction(-1)
-        ax.legend()
-        ax.set_title("Golden Angle – Interlaced (TIMBIR-style)")
-        plt.show()
-
-    # ----------------------------------------------------------------------
-    #   EQUALLY SPACED – K-TURN
-    # ----------------------------------------------------------------------
-    def generate_interlaced_kturns(self, delta_theta=None):
-        """
-        θ_n = θ_start + n * dθ
-        dθ = (θ_stop - θ_start) / (N - 1) o def da user
-        """
-        # Step
-        if delta_theta is not None:
-            delta_theta = float(delta_theta)
-        else:
-            delta_theta = (self.rotation_stop - self.rotation_start) / (self.num_angles - 1)
-
-        self.rotation_step = delta_theta
-
-        # single loop
-        base = self.rotation_start + np.arange(self.num_angles) * delta_theta
-
-        # multi-turn
-        angles_all = []
-        for k in range(self.K_interlace):
-            angles_all.append(base + k * 360.0)
-
-        # concateno tutti i loop
-        theta_unwrapped = np.concatenate(angles_all)
-        # versione modulo 360 (per PSO / FPGA)
-        theta = np.mod(theta_unwrapped, 360.0)
-
-        self.theta_interlaced = np.array(theta)
-        self.theta_interlaced_unwrapped = np.array(theta_unwrapped)
-
-        if self.K_interlace > 1:
-            self.rotation_stop = theta_unwrapped[-1]   # motore ruota fino all'ultimo unwrapped
-
-        return angles_all
-
-    # round plot
-    def plot_equally_loops_polar_kturns(self):
-
-        theta_unwrapped = self.theta_interlaced_unwrapped
-        theta_mod = np.mod(theta_unwrapped, 360.0)
-
-        fig = plt.figure(figsize=(7, 7))
-        ax = fig.add_subplot(111, polar=True)
-
-        ax.set_title(
-            f"Equally Spaced Acquisition (N={self.num_angles}, K={self.K_interlace})\n"
-            "Each loop on its own circle",
-            va='bottom', fontsize=13
-        )
-
-        for k in range(self.K_interlace):
-            start = k * self.num_angles
-            stop = (k + 1) * self.num_angles
-
-            theta_k = theta_mod[start:stop]
-            radii = np.full_like(theta_k, 1 - k * 0.15)
-
-            ax.plot(
-                np.deg2rad(theta_k),
-                radii,
-                '-o',
-                lw=1.2,
-                ms=5,
-                alpha=0.85
-            )
-
-            for i, ang in enumerate(theta_k):
-                ax.text(
-                    np.deg2rad(ang),
-                    radii[i] + 0.03,
-                    str(k + 1),
-                    ha='center',
-                    va='bottom',
-                    fontsize=8
-                )
-
-        ax.set_rticks([])
-        ax.set_theta_zero_location('N')
-        ax.set_theta_direction(-1)
-
-        plt.show()
-
-    def print_angles_table_kturns(self, angles_all):
-        print(f"{'Idx':>5}", end='')
-        for k in range(len(angles_all)):
-            print(f"{f'Loop {k + 1} K-Turn':>15}", end='')
-        print()
-
-        for i in range(len(angles_all[0])):
-            print(f"{i:5}", end='')
-            for loop in angles_all:
-                print(f"{loop[i]:15.3f}", end='')
-            print()
-
-    def print_cumulative_angles_table_kturns(self, angles_all):
-        cumulative = [angles_all[0].copy()]
-        for k in range(1, len(angles_all)):
-            prev_max = cumulative[-1].max()
-            cumulative.append(angles_all[k] + np.ceil(prev_max / 360) * 360)
-
-        print(f"{'Idx':>5}", end='')
-        for k in range(len(cumulative)):
-            print(f"{f'Loop {k + 1} K-Turn':>18}", end='')
-        print()
-
-        for i in range(len(cumulative[0])):
-            print(f"{i:5}", end='')
-            for loop in cumulative:
-                print(f"{loop[i]:18.3f}", end='')
-            print()
-
-    # ----------------------------------------------------------------------
-    #   EQUALLY SPACED multi-turn acquisition (TIMBIR-like)
-    # ----------------------------------------------------------------------
-    def generate_interlaced_multiturns(self, delta_theta=None):
-
-        N = self.num_angles
-        K = self.K_interlace
-
-        if delta_theta is not None:
-            delta_theta = float(delta_theta)
-        else:
-            delta_theta = (self.rotation_stop - self.rotation_start) / (N - 1)
-
-        self.rotation_step = delta_theta
-
-        n = np.arange(N)
-        angles_all = []
-
-        for k in range(K):
-            theta_n = self.rotation_start + (n + k / K) * delta_theta
-            angles_all.append(theta_n)
-
-        theta_unwrapped = np.concatenate(angles_all)
-        theta = np.mod(theta_unwrapped, 360.0)
-
-        self.theta_interlaced = np.array(theta)
-        self.theta_interlaced_unwrapped = np.array(theta_unwrapped)
-
-        if self.K_interlace > 1:
-            self.rotation_stop = theta_unwrapped[-1]
-
-        return angles_all
-
-    def plot_equally_loops_polar_multiturns(self):
-
-        theta_unwrapped = self.theta_interlaced_unwrapped
-        theta_mod = np.mod(theta_unwrapped, 360.0)
-
-        fig = plt.figure(figsize=(7, 7))
-        ax = fig.add_subplot(111, polar=True)
-
-        ax.set_title(
-            f"Equally Spaced Acquisition (N={self.num_angles}, K={self.K_interlace})\n"
-            "Each loop on its own circle",
-            va='bottom', fontsize=13
-        )
-
-        for k in range(self.K_interlace):
-            start = k * self.num_angles
-            stop = (k + 1) * self.num_angles
-
-            theta_k = theta_mod[start:stop]
-            radii = np.full_like(theta_k, 1 - k * 0.15)
-
-            ax.plot(
-                np.deg2rad(theta_k),
-                radii,
-                '-o',
-                lw=1.2,
-                ms=5,
-                alpha=0.85
-            )
-
-            for i, ang in enumerate(theta_k):
-                ax.text(
-                    np.deg2rad(ang),
-                    radii[i] + 0.03,
-                    str(k + 1),
-                    ha='center',
-                    va='bottom',
-                    fontsize=8
-                )
-
-        ax.set_rticks([])
-        ax.set_theta_zero_location('N')
-        ax.set_theta_direction(-1)
-
-        plt.show()
-
-    def print_angles_table_multiturns(self, angles_all):
-        print(f"{'Idx':>5}", end='')
-        for k in range(len(angles_all)):
-            print(f"{f'Loop {k + 1} Multi-Turn':>18}", end='')
-        print()
-        for i in range(len(angles_all[0])):
-            print(f"{i:5}", end='')
-            for loop in angles_all:
-                print(f"{loop[i]:18.3f}", end='')
-            print()
-
-    def print_cumulative_angles_table_multiturns(self, angles_all):
-        cumulative = [angles_all[0].copy()]
-        for k in range(1, len(angles_all)):
-            prev_max = cumulative[-1].max()
-            cumulative.append(angles_all[k] + np.ceil(prev_max / 360) * 360)
-
-        print(f"{'Idx':>5}", end='')
-        for k in range(len(cumulative)):
-            print(f"{f'Loop {k + 1} Multi-Turn':>20}", end='')
-        print()
-
-        for i in range(len(cumulative[0])):
-            print(f"{i:5}", end='')
-            for loop in cumulative:
-                print(f"{loop[i]:20.3f}", end='')
-            print()
-
-    # =========================================================
-    # VAN DER CORPUT INTERLACED – K-TURN
-    # =========================================================
-    # =========================================================
-    def generate_interlaced_corput(self, delta_theta=None):
-
-        if delta_theta is not None:
-            delta_theta = float(delta_theta)
-        else:
-            delta_theta = (self.rotation_stop - self.rotation_start) / (self.num_angles - 1)
-
-        self.rotation_step = delta_theta
-
-        # base angles  
-        base = self.rotation_start + np.arange(self.num_angles) * delta_theta
-
-        #  permutazione Corput per i LOOP (K) -> offsets non sequenziali
-        K = self.K_interlace
-        bitsK = int(np.ceil(np.log2(K)))
-        MK = 1 << bitsK
-
-        p_corput = np.array([self.bit_reverse(i, bitsK) for i in range(MK)])
-        p_corput = p_corput[p_corput < K]  # lunghezza K
-        assert len(p_corput) == K
-
-        # offset_k in [0, delta_theta) con passi delta_theta/K (tutti diversi)
-        offsets = (p_corput / K) * delta_theta
-
-        #  permutazione Corput (bit-reversal) per gli INDICI dentro ogni loop (N)
-        angles_all = []
-
-        bits = int(np.ceil(np.log2(self.num_angles)))
-        M = 1 << bits  # 2^bits
-
-        indices = np.array([self.bit_reverse(i, bits) for i in range(M)])
-        indices = indices[indices < self.num_angles]  # lunghezza = num_angles
-
-        # genero i loop: stessi indici "Corput", ma offset diverso per loop
-        #    + unwrapped continua oltre 360 per moto reale
-        for k in range(K):
-            offset = offsets[k]
-
-            # angoli "casuali" (ordine corput) + offset frazionario
-            loop_angles = base[indices] + offset
-
-            # riporto in [rotation_start, rotation_start+360) (solo per il MOD)
-            loop_angles_mod = np.mod(loop_angles - self.rotation_start, 360.0) + self.rotation_start
-
-            # continuo oltre 360 per ogni loop (moto continuo)
-            loop_angles_unwrapped = loop_angles_mod + 360.0 * k
-
-            angles_all.append(loop_angles_unwrapped)
-
-        # -----------------------------------------------------
-        # 5) concateno + ordino 
-        # -----------------------------------------------------
-        theta_unwrapped__unsorted = np.concatenate(angles_all)
-
-        theta_unsorted = np.mod(theta_unwrapped__unsorted - self.rotation_start, 360.0) + self.rotation_start
-
-        theta_unwrapped = np.sort(theta_unwrapped__unsorted)  # crescente continuo
-        theta = np.sort(theta_unsorted)                       # crescente mod 360
-
-        self.theta_interlaced = np.array(theta)                      # ordinato crescente (mod 360)
-        self.theta_interlaced_unwrapped = np.array(theta_unwrapped)  # ordinato crescente (continuo)
-
-        if self.K_interlace > 1:
-            self.rotation_stop = float(theta_unwrapped[-1])
-
-        return angles_all
-
-    def plot_equally_loops_polar_corput(self):
-        """
-        Plot polar dei loop interlacciati Van der Corput
-        """
-        theta_unwrapped = self.theta_interlaced_unwrapped
-        theta_mod = np.mod(theta_unwrapped, 360.0)
-
-        fig = plt.figure(figsize=(7, 7))
-        ax = fig.add_subplot(111, polar=True)
-        ax.set_title(
-            f"Interlaced Van der Corput K-Turn (N={self.num_angles}, K={self.K_interlace})",
-            va='bottom', fontsize=13
-        )
-
-        for k in range(self.K_interlace):
-            start = k * self.num_angles
-            stop = (k + 1) * self.num_angles
-            theta_k = theta_mod[start:stop]
-            radii = np.full_like(theta_k, 1 - k * 0.15)
-
-            ax.plot(
-                np.deg2rad(theta_k),
-                radii,
-                '-o',
-                lw=1.2,
-                ms=5,
-                alpha=0.85
-            )
-
-            for i, ang in enumerate(theta_k):
-                ax.text(
-                    np.deg2rad(ang),
-                    radii[i] + 0.03,
-                    str(k + 1),
-                    ha='center',
-                    va='bottom',
-                    fontsize=8
-                )
-
-        ax.set_rticks([])
-        ax.set_theta_zero_location('N')
-        ax.set_theta_direction(-1)
-        plt.show()
-
-    def print_angles_table_corput(self, angles_all):
-        """
-        Stampa tabella degli angoli Van der Corput per loop
-        """
-        print(f"{'Idx':>5}", end='')
-        for k in range(len(angles_all)):
-            print(f"{f'Loop {k + 1} K-Turn':>15}", end='')
-        print()
-
-        for i in range(len(angles_all[0])):
-            print(f"{i:5}", end='')
-            for loop in angles_all:
-                print(f"{loop[i]:15.3f}", end='')
-            print()
-
-    def print_cumulative_angles_table_corput(self, angles_all):
-        """
-        Stampa tabella cumulativa degli angoli Van der Corput per loop
-        """
-        cumulative = [angles_all[0].copy()]
-        for k in range(1, len(angles_all)):
-            prev_max = cumulative[-1].max()
-            cumulative.append(angles_all[k] + np.ceil(prev_max / 360) * 360)
-
-        print(f"{'Idx':>5}", end='')
-        for k in range(len(cumulative)):
-            print(f"{f'Loop {k + 1} K-Turn':>18}", end='')
-        print()
-
-        for i in range(len(cumulative[0])):
-            print(f"{i:5}", end='')
-            for loop in cumulative:
-                print(f"{loop[i]:18.3f}", end='')
-            print()
-
-    def plot_live_corput(self):
-        """
-        Plot temporale (live-style) degli angoli Van der Corput.
-        Mostra l'ordine di acquisizione reale nel tempo.
-        """
-        theta_unwrapped = self.theta_interlaced_unwrapped
-        theta_mod = np.mod(theta_unwrapped, 360.0)
-
-        fig, ax = plt.subplots(figsize=(9, 5))
-
-        n_total = len(theta_mod)
-        indices = np.arange(n_total)
-
-        for k in range(self.K_interlace):
-            start = k * self.num_angles
-            stop = (k + 1) * self.num_angles
-
-            ax.scatter(
-                indices[start:stop],
-                theta_mod[start:stop],
-                s=18,
-                alpha=0.85,
-                label=f"Loop {k+1}"
-            )
-
-            ax.plot(
-                indices[start:stop],
-                theta_mod[start:stop],
-                lw=0.6,
-                alpha=0.4
-            )
-
-        ax.set_title(
-            f"Live Acquisition Order – Van der Corput (N={self.num_angles}, K={self.K_interlace})",
-            fontsize=13
-        )
-
-        ax.set_xlabel("Acquisition index")
-        ax.set_ylabel("Angle [deg]")
-        ax.set_ylim(0, 360)
-        ax.grid(True, alpha=0.3)
-        ax.legend()
-
-        plt.tight_layout()
-        plt.show()
-
-    # ----------------------------------------------------------------------
-    #           FUNZIONI
-    # ----------------------------------------------------------------------
-    def compute_senses(self):
-
-        encoder_dir = 1 if self.PSOCountsPerRotation > 0 else -1
-        motor_dir = 1 if self.RotationDirection == 0 else -1
-        user_dir = 1 if self.rotation_stop > self.rotation_start else -1
-        return encoder_dir * motor_dir * user_dir, user_dir
-
-    def compute_frame_time(self):
-        return self.exposure + self.readout
-
-    def compute_positions_PSO(self):
-
-        overall_sense, user_direction = self.compute_senses()
-        encoder_multiply = self.PSOCountsPerRotation / 360.0
-
-        raw_counts = self.rotation_step * encoder_multiply
-        delta_counts = round(raw_counts)
-        self.rotation_step = delta_counts / encoder_multiply
-
-        dt = self.compute_frame_time()
-        self.motor_speed = abs(self.rotation_step) / dt
-
-        accel_dist = 0.5 * self.motor_speed * self.RotationAccelTime
-
-        if overall_sense > 0:
-            self.rotation_start_new = self.rotation_start
-        else:
-            self.rotation_start_new = self.rotation_start - (2 - self.readout_margin) * self.rotation_step
-
-        taxi_steps = math.ceil((accel_dist / abs(self.rotation_step)) + 0.5)
-        taxi_dist = taxi_steps * abs(self.rotation_step)
-
-        self.PSOStartTaxi = self.rotation_start_new - taxi_dist * user_direction
-        self.rotation_stop_new = self.rotation_start_new + (self.num_angles - 1) * self.rotation_step
-        self.PSOEndTaxi = self.rotation_stop_new + taxi_dist * user_direction
-
-        self.theta_classic = self.rotation_start_new + np.arange(self.num_angles) * self.rotation_step
-
-    # ----------------------------------------------------------------------
-    # Modello taxi
-    # ----------------------------------------------------------------------
-    def simulate_taxi_motion(self, omega_target=10, dt=1e-4):
-
-        theta_required = self.theta_interlaced_unwrapped.max()
-        theta_max = float(np.max(self.theta_interlaced_unwrapped))   # indipendenza dal metodo
-
-        accel = decel = omega_target / self.RotationAccelTime
-
-        # accelerazione
-        t_acc = np.arange(0, self.RotationAccelTime, dt)
-        theta_acc = 0.5 * accel * t_acc**2
-        theta_acc_end = theta_acc[-1]
-
-        # plateau
-        theta_flat_len = theta_max - 2 * theta_acc_end
-        if theta_flat_len < 0:
-            raise ValueError("Profilo di moto non realizzabile")
-
-        t_flat = np.arange(0, theta_flat_len / omega_target, dt)
-        theta_flat = theta_acc_end + omega_target * t_flat
-
-        # decelerazione
-        t_dec = np.arange(0, self.RotationAccelTime, dt)
-        theta_dec = (theta_flat[-1] + omega_target * t_dec - 0.5 * decel * t_dec**2)
-
-        self.theta_vec = np.concatenate([theta_acc, theta_flat, theta_dec])
-        self.t_vec = np.concatenate([
-            t_acc,
-            t_acc[-1] + t_flat,
-            t_acc[-1] + t_flat[-1] + t_dec
-        ])
-
-        """
-        theta_flat_len = theta_max - 2 * theta_acc[-1]
-        T_flat = theta_flat_len / omega_target
-        t_flat = np.arange(0, T_flat, dt)
-        theta_flat = theta_acc[-1] + omega_target * t_flat
-
-        T_dec = omega_target / decel
-        t_dec = np.arange(0, T_dec, dt)
-        theta_dec = theta_flat[-1] + omega_target * t_dec - 0.5 * decel * t_dec ** 2
-
-        self.theta_vec = np.concatenate([theta_acc, theta_flat, theta_dec])
-
-        self.t_vec = np.concatenate([t_acc,
-                                     t_acc[-1] + t_flat,
-                                     t_acc[-1] + t_flat[-1] + t_dec])
-        """
-
-    def compute_real_motion(self):
-
-        self.t_real = np.interp(self.theta_interlaced_unwrapped, self.theta_vec, self.t_vec)
-        #self.t_real = np.interp(self.theta_interlaced, self.theta_vec, self.t_vec)
-        self.theta_real = np.interp(self.t_real, self.t_vec, self.theta_vec)
-        
-        ''' utilizzando unwrapped prendo gli angoli in multi tourn ma ordinati in senso crescente non in mod 360
-
-        '''
-   
-    def convert_angles_to_counts(self):
-        ''' valuta np.int64 per evitare overflow'''
-
-        pulses_per_degree = self.PSOCountsPerRotation / 360.0
-        # resta in mod 360
-        #self.PSOCountsIdeal = np.round(self.theta_interlaced * pulses_per_degree).astype(int)
-
-        self.PSOCountsIdeal = np.round(self.theta_interlaced_unwrapped * pulses_per_degree).astype(int)
-        # warning per avere certezza che gli angoli siano crescenti 
-        if np.any(np.diff(self.PSOCountsIdeal) <= 0):
-            print("WARNING: counts non strettamente crescenti (duplicati/inversioni).")
-            
-        #theta_real = posizione angolare del motore lungo la traiettoria taxi
-        self.PSOCountsTaxiCorrected = np.round(self.theta_real * pulses_per_degree).astype(int)  # impulsi reali corretti
-
-        self.PSOCountsFinal = self.PSOCountsTaxiCorrected.copy()                # impulsi reali corretti
-
-        pulse_counts = np.round(self.theta_interlaced / 360.0 * self.PSOCountsPerRotation).astype(int)
-        actual_angles = pulse_counts / pulses_per_degree
-        angular_error = actual_angles - self.theta_interlaced
-
-        for a, p, act, err in zip(self.theta_interlaced, pulse_counts, actual_angles, angular_error):
-            print(f"Target: {a:8.2f} deg | Pulse: {p:6d} | Actual: {act:9.6f} deg | Error: {err:+.6f} deg")
-
-        print('********************* unwrapped angles *********************')
-        pulse_counts = np.round(self.theta_interlaced_unwrapped / 360.0 * self.PSOCountsPerRotation).astype(int)
-        actual_angles = pulse_counts / pulses_per_degree
-        angular_error = actual_angles - self.theta_interlaced_unwrapped
-
-        for a, p, act, err in zip(self.theta_interlaced_unwrapped, pulse_counts, actual_angles, angular_error):
-            print(f"Target: {a:8.2f} deg | Pulse: {p:6d} | Actual: {act:9.6f} deg | Error: {err:+.6f} deg")
-
-    def plot_all_comparisons(self):
-
-        ideal = self.PSOCountsIdeal
-        real = self.PSOCountsTaxiCorrected
-        final = self.PSOCountsFinal
-
-        fig, axs = plt.subplots(3, 1, figsize=(12, 12), sharex=True)
-
-        axs[0].plot(ideal, ideal, 'o--', alpha=0.6, label="Ideal")
-        axs[0].plot(ideal, real, 'o-', alpha=0.9, label="Real (Taxi)")
-        axs[0].set_title("Ideale vs Reale")
-        axs[0].grid()
-        axs[0].legend()
-
-        axs[1].plot(ideal, ideal, 'o--', alpha=0.6, label="Ideal")
-        axs[1].plot(ideal, final, 'o-', alpha=0.9, label="Final FPGA")
-        axs[1].set_title("Ideale vs FPGA")
-        axs[1].grid()
-        axs[1].legend()
-
-        axs[2].plot(real, real, 'o--', alpha=0.6, label="Real")
-        axs[2].plot(real, final, 'o-', alpha=0.9, label="Final FPGA")
-        axs[2].set_title("Reale vs FPGA")
-        axs[2].grid()
-        axs[2].legend()
-
-        plt.tight_layout()
-        plt.show()
-
-    def plot(self):
-        pulses_per_degree = self.PSOCountsPerRotation / 360.0
-         # plot MOD 360 (angoli ordinati mod 360) 
-        x1 = self.theta_interlaced
-        y1 = np.round(x1 * pulses_per_degree).astype(int)
-
-        # plot UNWRAPPED (angoli continui) 
-        x2 = self.theta_interlaced_unwrapped
-        y2 = np.round(x2 * pulses_per_degree).astype(int)
-
-        fig, axs = plt.subplots(2, 1, figsize=(10, 8))
-        axs[0].plot(x1, y1, 'o-')
-        axs[0].set_title('MOD 360: Angolo vs Impulsi')
-        axs[0].set_xlabel('Angolo [deg]')
-        axs[0].set_ylabel('Impulsi encoder')
-        axs[0].grid(True)
-
-        axs[1].plot(x2, y2, 's-')
-        axs[1].set_title('UNWRAPPED: Angolo vs Impulsi')
-        axs[1].set_xlabel('Angolo unwrapped [deg]')
-        axs[1].set_ylabel('Impulsi encoder')
-        axs[1].grid(True)
-
-        plt.tight_layout()
-        plt.show()
-
-       
-
-    
 # ============================================================================
 def main():
     parser = argparse.ArgumentParser(description="Run interlaced scan simulation.")
@@ -993,9 +333,11 @@ def main():
     # select method
     if args.mode == "timbir":
         scan.generate_interlaced_timbir()
+        scan.print_delta_angles_timbir(out_dir="debug_angles")
 
     elif args.mode == "multitimbir":
         scan.generate_interlaced_multitimbir()
+        scan.print_delta_angles_multitimbir(out_dir="debug_angles")
 
     elif args.mode == "golden":
         angles_all = scan.generate_interlaced_goldenangle()
@@ -1030,15 +372,6 @@ def main():
 
     scan.plot_all_comparisons()
     scan.plot()
-    
-    # test plot
-    self.generate_interlaced_timbir()
-    self.print_delta_angles_timbir(out_dir="debug_angles")
-
-    self.generate_interlaced_multitimbir()
-   self.print_delta_angles_multitimbir(out_dir="debug_angles")
-
-
 
 
 if __name__ == "__main__":
