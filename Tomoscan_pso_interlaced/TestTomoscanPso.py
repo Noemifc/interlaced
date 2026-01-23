@@ -104,7 +104,6 @@ class InterlacedScan:
 
     def print_delta_angles_timbir(self, out_dir="angles_out", print_first=20):
         """
-        Salva:
           - CSV in ordine di acquisizione con angoli (wrapped/unwrapped) e delta tra step consecutivi
           - CSV con angoli ordinati (0..360) e delta ciclico tra vicini
         """
@@ -215,7 +214,6 @@ class InterlacedScan:
 
     def print_delta_angles_multitimbir(self, out_dir="angles_out", print_first=20):
         """
-        Salva:
           - CSV in ordine di acquisizione con angoli (wrapped/unwrapped) e delta tra step consecutivi
           - CSV con angoli ordinati (0..360) e delta ciclico tra vicini
         """
