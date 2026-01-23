@@ -640,9 +640,39 @@ class InterlacedScan:
         plt.tight_layout()
         plt.show()
 
+    #------
+    # plot delta
+    #------
+    def plotdelta(self, metodo=""):
+
+        
+        theta = np.array(self.theta_interlaced_unwrapped, dtype=float)  # ordine acquisizione 
+        dtheta = np.diff(theta)  
+
+        print(f"\n--- Δθ  ({metodo}) ---")
+        for i, d in enumerate(dtheta):
+            print(f"{i:4d} -> {i+1:4d}: {d:9.3f} deg")
+
+        fig, ax = plt.subplots(figsize=(9, 4))
+        ax.plot(np.arange(1, len(theta)), dtheta, "o-")
+        ax.set_title(f"Δθ tra angoli consecutivi – {metodo}")
+        ax.set_xlabel("Indice acquisizione")
+        ax.set_ylabel("Δθ [deg]")
+        ax.grid(True, alpha=0.3)
+        plt.tight_layout()
+        plt.show()
+
+
+
+    
+    
+
     # ----------------------------------------------------------------------
     #           FUNZIONI
     # ----------------------------------------------------------------------
+
+
+    
     def compute_senses(self):
 
         encoder_dir = 1 if self.PSOCountsPerRotation > 0 else -1
