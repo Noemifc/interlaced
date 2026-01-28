@@ -1,6 +1,5 @@
 import numpy as np
 import math
-import struct
 import matplotlib.pyplot as plt
 import argparse
 
@@ -24,7 +23,7 @@ class InterlacedScan:
         exposure=0.01,
         readout=0.01,
         readout_margin=1,
-        K_interlace=5
+        K_interlace=4
     ):
 
         # Parametri di scansione
@@ -142,7 +141,7 @@ class InterlacedScan:
             fontsize=12
         )
 
-        ax.plot(np.deg2rad(theta), radii, "-o", lw=1.2, ms=5, alpha=0.8)
+        ax.plot(np.deg2rad(theta), radii, "o", lw=1.2, ms=5, alpha=0.8)
 
         for ang, r, lp in zip(theta, radii, group_indices):
             ax.text(
@@ -572,13 +571,24 @@ class InterlacedScan:
             print(f"{i:4d} -> {i+1:4d}: {d:9.3f} deg")
 
         fig, ax = plt.subplots(figsize=(9, 4))
-        ax.plot(np.arange(1, len(theta)), dtheta, "o-")
+        ax.plot(np.arange(1, len(theta)), dtheta, "o")
         ax.set_title(f"Δθ tra angoli consecutivi – {metodo}")
         ax.set_xlabel("Indice acquisizione")
         ax.set_ylabel("Δθ [deg]")
         ax.grid(True, alpha=0.3)
         plt.tight_layout()
         plt.show()
+
+
+
+
+
+
+
+
+
+
+
 
     # ----------------------------------------------------------------------
     #           FUNZIONI
@@ -740,6 +750,76 @@ class InterlacedScan:
         plt.tight_layout()
         plt.show()
 
+    # ----------------------------------------------------------------------
+    #   Export Excel
+    # ----------------------------------------------------------------------
+    def export_to_excel(self, filename="risultati.xlsx"):
+        try:
+            import pandas as pd
+        except ImportError as e:
+            raise ImportError("Manca pandas. Installa con: pip install pandas") from e
+
+        # openpyxl serve a pandas per scrivere .xlsx
+        try:
+            import openpyxl  # noqa: F401
+        except ImportError as e:
+            raise ImportError("Manca openpyxl. Installa con: pip install openpyxl") from e
+
+        import numpy as np
+
+        pulses_per_degree = self.PSOCountsPerRotation / 360.0
+
+        # -------- MOD 360 (angoli in [0,360) ordinati) --------
+        pulse_counts_mod = np.round(self.theta_interlaced / 360.0 * self.PSOCountsPerRotation).astype(int)
+        actual_mod = pulse_counts_mod / pulses_per_degree
+        err_mod = actual_mod - self.theta_interlaced
+
+        df_mod = pd.DataFrame({
+            "target_deg": self.theta_interlaced,
+            "pulse": pulse_counts_mod,
+            "actual_deg": actual_mod,
+            "error_deg": err_mod
+        })
+
+        # -------- UNWRAPPED (ordine temporale/acquisizione) --------
+        pulse_counts_unw = np.round(self.theta_interlaced_unwrapped / 360.0 * self.PSOCountsPerRotation).astype(int)
+        actual_unw = pulse_counts_unw / pulses_per_degree
+        err_unw = actual_unw - self.theta_interlaced_unwrapped
+
+        df_unw = pd.DataFrame({
+            "target_deg": self.theta_interlaced_unwrapped,
+            "pulse": pulse_counts_unw,
+            "actual_deg": actual_unw,
+            "error_deg": err_unw
+        })
+
+        # -------- Confronto counts (ideal/taxi/final) --------
+        df_counts = pd.DataFrame({
+            "theta_unwrapped_deg": self.theta_interlaced_unwrapped,
+            "counts_ideal": self.PSOCountsIdeal,
+            "counts_taxi": self.PSOCountsTaxiCorrected,
+            "counts_final": self.PSOCountsFinal
+        })
+
+        # -------- Δθ --------
+        theta = np.array(self.theta_interlaced_unwrapped, dtype=float)
+        df_delta = pd.DataFrame({
+            "i": np.arange(len(theta) - 1),
+            "theta_i": theta[:-1],
+            "theta_ip1": theta[1:],
+            "delta_theta": np.diff(theta)
+        })
+
+        with pd.ExcelWriter(filename, engine="openpyxl") as w:
+            df_mod.to_excel(w, sheet_name="MOD360", index=False)
+            df_unw.to_excel(w, sheet_name="UNWRAPPED", index=False)
+            df_counts.to_excel(w, sheet_name="COUNTS", index=False)
+            df_delta.to_excel(w, sheet_name="DELTA_THETA", index=False)
+
+        print(f"Creato: {filename}")
+
+
+
 
 # ============================================================================
 def main():
@@ -809,5 +889,12 @@ def main():
     scan.plot()
 
 
+    filename = f"risultati_{args.mode}_N{args.num_angles}_K{args.K_interlace}_PSO{args.PSOCountsPerRotation}.xlsx"
+    scan.export_to_excel(filename)
+
+
 if __name__ == "__main__":
     main()
+
+
+# python Tomoscan_pso_interlaced.py  --mode multitimbir  --num_angles 32 --K_interlace 4 --PSOCountsPerRotation 20000  > multitimbir_32_4_20000_output.txt

@@ -1,0 +1,388 @@
+
+--- Δθ (multitimbir) ---
+   0 ->    1:     5.625 deg
+   1 ->    2:    -2.812 deg
+   2 ->    3:     5.625 deg
+   3 ->    4:     2.812 deg
+   4 ->    5:     5.625 deg
+   5 ->    6:    -2.812 deg
+   6 ->    7:     5.625 deg
+   7 ->    8:     2.812 deg
+   8 ->    9:     5.625 deg
+   9 ->   10:    -2.812 deg
+  10 ->   11:     5.625 deg
+  11 ->   12:     2.812 deg
+  12 ->   13:     5.625 deg
+  13 ->   14:    -2.812 deg
+  14 ->   15:     5.625 deg
+  15 ->   16:     2.812 deg
+  16 ->   17:     5.625 deg
+  17 ->   18:    -2.812 deg
+  18 ->   19:     5.625 deg
+  19 ->   20:     2.812 deg
+  20 ->   21:     5.625 deg
+  21 ->   22:    -2.813 deg
+  22 ->   23:     5.625 deg
+  23 ->   24:     2.812 deg
+  24 ->   25:     5.625 deg
+  25 ->   26:    -2.812 deg
+  26 ->   27:     5.625 deg
+  27 ->   28:     2.812 deg
+  28 ->   29:     5.625 deg
+  29 ->   30:    -2.812 deg
+  30 ->   31:     5.625 deg
+  31 ->   32:     2.812 deg
+  32 ->   33:     5.625 deg
+  33 ->   34:    -2.812 deg
+  34 ->   35:     5.625 deg
+  35 ->   36:     2.812 deg
+  36 ->   37:     5.625 deg
+  37 ->   38:    -2.812 deg
+  38 ->   39:     5.625 deg
+  39 ->   40:     2.812 deg
+  40 ->   41:     5.625 deg
+  41 ->   42:    -2.813 deg
+  42 ->   43:     5.625 deg
+  43 ->   44:     2.813 deg
+  44 ->   45:     5.625 deg
+  45 ->   46:    -2.812 deg
+  46 ->   47:     5.625 deg
+  47 ->   48:     2.812 deg
+  48 ->   49:     5.625 deg
+  49 ->   50:    -2.812 deg
+  50 ->   51:     5.625 deg
+  51 ->   52:     2.812 deg
+  52 ->   53:     5.625 deg
+  53 ->   54:    -2.812 deg
+  54 ->   55:     5.625 deg
+  55 ->   56:     2.812 deg
+  56 ->   57:     5.625 deg
+  57 ->   58:    -2.812 deg
+  58 ->   59:     5.625 deg
+  59 ->   60:     2.812 deg
+  60 ->   61:     5.625 deg
+  61 ->   62:    -2.812 deg
+  62 ->   63:     5.625 deg
+  63 ->   64:     2.812 deg
+  64 ->   65:     5.625 deg
+  65 ->   66:    -2.812 deg
+  66 ->   67:     5.625 deg
+  67 ->   68:     2.812 deg
+  68 ->   69:     5.625 deg
+  69 ->   70:    -2.812 deg
+  70 ->   71:     5.625 deg
+  71 ->   72:     2.812 deg
+  72 ->   73:     5.625 deg
+  73 ->   74:    -2.812 deg
+  74 ->   75:     5.625 deg
+  75 ->   76:     2.812 deg
+  76 ->   77:     5.625 deg
+  77 ->   78:    -2.812 deg
+  78 ->   79:     5.625 deg
+  79 ->   80:     2.812 deg
+  80 ->   81:     5.625 deg
+  81 ->   82:    -2.812 deg
+  82 ->   83:     5.625 deg
+  83 ->   84:     2.812 deg
+  84 ->   85:     5.625 deg
+  85 ->   86:    -2.812 deg
+  86 ->   87:     5.625 deg
+  87 ->   88:     2.813 deg
+  88 ->   89:     5.625 deg
+  89 ->   90:    -2.812 deg
+  90 ->   91:     5.625 deg
+  91 ->   92:     2.812 deg
+  92 ->   93:     5.625 deg
+  93 ->   94:    -2.812 deg
+  94 ->   95:     5.625 deg
+  95 ->   96:     2.812 deg
+  96 ->   97:     5.625 deg
+  97 ->   98:    -2.812 deg
+  98 ->   99:     5.625 deg
+  99 ->  100:     2.812 deg
+ 100 ->  101:     5.625 deg
+ 101 ->  102:    -2.812 deg
+ 102 ->  103:     5.625 deg
+ 103 ->  104:     2.812 deg
+ 104 ->  105:     5.625 deg
+ 105 ->  106:    -2.812 deg
+ 106 ->  107:     5.625 deg
+ 107 ->  108:     2.812 deg
+ 108 ->  109:     5.625 deg
+ 109 ->  110:    -2.812 deg
+ 110 ->  111:     5.625 deg
+ 111 ->  112:     2.812 deg
+ 112 ->  113:     5.625 deg
+ 113 ->  114:    -2.813 deg
+ 114 ->  115:     5.625 deg
+ 115 ->  116:     2.812 deg
+ 116 ->  117:     5.625 deg
+ 117 ->  118:    -2.812 deg
+ 118 ->  119:     5.625 deg
+ 119 ->  120:     2.812 deg
+ 120 ->  121:     5.625 deg
+ 121 ->  122:    -2.812 deg
+ 122 ->  123:     5.625 deg
+ 123 ->  124:     2.812 deg
+ 124 ->  125:     5.625 deg
+ 125 ->  126:    -2.812 deg
+ 126 ->  127:     5.625 deg
+WARNING: counts non strettamente crescenti (duplicati/inversioni).
+Target:     0.00 deg | Pulse:      0 | Actual:  0.000000 deg | Error: +0.000000 deg
+Target:     2.81 deg | Pulse:    156 | Actual:  2.808000 deg | Error: -0.004500 deg
+Target:     5.62 deg | Pulse:    312 | Actual:  5.616000 deg | Error: -0.009000 deg
+Target:     8.44 deg | Pulse:    469 | Actual:  8.442000 deg | Error: +0.004500 deg
+Target:    11.25 deg | Pulse:    625 | Actual: 11.250000 deg | Error: +0.000000 deg
+Target:    14.06 deg | Pulse:    781 | Actual: 14.058000 deg | Error: -0.004500 deg
+Target:    16.88 deg | Pulse:    938 | Actual: 16.884000 deg | Error: +0.009000 deg
+Target:    19.69 deg | Pulse:   1094 | Actual: 19.692000 deg | Error: +0.004500 deg
+Target:    22.50 deg | Pulse:   1250 | Actual: 22.500000 deg | Error: +0.000000 deg
+Target:    25.31 deg | Pulse:   1406 | Actual: 25.308000 deg | Error: -0.004500 deg
+Target:    28.12 deg | Pulse:   1562 | Actual: 28.116000 deg | Error: -0.009000 deg
+Target:    30.94 deg | Pulse:   1719 | Actual: 30.942000 deg | Error: +0.004500 deg
+Target:    33.75 deg | Pulse:   1875 | Actual: 33.750000 deg | Error: +0.000000 deg
+Target:    36.56 deg | Pulse:   2031 | Actual: 36.558000 deg | Error: -0.004500 deg
+Target:    39.38 deg | Pulse:   2188 | Actual: 39.384000 deg | Error: +0.009000 deg
+Target:    42.19 deg | Pulse:   2344 | Actual: 42.192000 deg | Error: +0.004500 deg
+Target:    45.00 deg | Pulse:   2500 | Actual: 45.000000 deg | Error: +0.000000 deg
+Target:    47.81 deg | Pulse:   2656 | Actual: 47.808000 deg | Error: -0.004500 deg
+Target:    50.62 deg | Pulse:   2812 | Actual: 50.616000 deg | Error: -0.009000 deg
+Target:    53.44 deg | Pulse:   2969 | Actual: 53.442000 deg | Error: +0.004500 deg
+Target:    56.25 deg | Pulse:   3125 | Actual: 56.250000 deg | Error: +0.000000 deg
+Target:    59.06 deg | Pulse:   3281 | Actual: 59.058000 deg | Error: -0.004500 deg
+Target:    61.88 deg | Pulse:   3438 | Actual: 61.884000 deg | Error: +0.009000 deg
+Target:    64.69 deg | Pulse:   3594 | Actual: 64.692000 deg | Error: +0.004500 deg
+Target:    67.50 deg | Pulse:   3750 | Actual: 67.500000 deg | Error: +0.000000 deg
+Target:    70.31 deg | Pulse:   3906 | Actual: 70.308000 deg | Error: -0.004500 deg
+Target:    73.12 deg | Pulse:   4062 | Actual: 73.116000 deg | Error: -0.009000 deg
+Target:    75.94 deg | Pulse:   4219 | Actual: 75.942000 deg | Error: +0.004500 deg
+Target:    78.75 deg | Pulse:   4375 | Actual: 78.750000 deg | Error: +0.000000 deg
+Target:    81.56 deg | Pulse:   4531 | Actual: 81.558000 deg | Error: -0.004500 deg
+Target:    84.38 deg | Pulse:   4688 | Actual: 84.384000 deg | Error: +0.009000 deg
+Target:    87.19 deg | Pulse:   4844 | Actual: 87.192000 deg | Error: +0.004500 deg
+Target:    90.00 deg | Pulse:   5000 | Actual: 90.000000 deg | Error: +0.000000 deg
+Target:    92.81 deg | Pulse:   5156 | Actual: 92.808000 deg | Error: -0.004500 deg
+Target:    95.62 deg | Pulse:   5312 | Actual: 95.616000 deg | Error: -0.009000 deg
+Target:    98.44 deg | Pulse:   5469 | Actual: 98.442000 deg | Error: +0.004500 deg
+Target:   101.25 deg | Pulse:   5625 | Actual: 101.250000 deg | Error: +0.000000 deg
+Target:   104.06 deg | Pulse:   5781 | Actual: 104.058000 deg | Error: -0.004500 deg
+Target:   106.88 deg | Pulse:   5938 | Actual: 106.884000 deg | Error: +0.009000 deg
+Target:   109.69 deg | Pulse:   6094 | Actual: 109.692000 deg | Error: +0.004500 deg
+Target:   112.50 deg | Pulse:   6250 | Actual: 112.500000 deg | Error: +0.000000 deg
+Target:   115.31 deg | Pulse:   6406 | Actual: 115.308000 deg | Error: -0.004500 deg
+Target:   118.12 deg | Pulse:   6562 | Actual: 118.116000 deg | Error: -0.009000 deg
+Target:   120.94 deg | Pulse:   6719 | Actual: 120.942000 deg | Error: +0.004500 deg
+Target:   123.75 deg | Pulse:   6875 | Actual: 123.750000 deg | Error: +0.000000 deg
+Target:   126.56 deg | Pulse:   7031 | Actual: 126.558000 deg | Error: -0.004500 deg
+Target:   129.38 deg | Pulse:   7188 | Actual: 129.384000 deg | Error: +0.009000 deg
+Target:   132.19 deg | Pulse:   7344 | Actual: 132.192000 deg | Error: +0.004500 deg
+Target:   135.00 deg | Pulse:   7500 | Actual: 135.000000 deg | Error: +0.000000 deg
+Target:   137.81 deg | Pulse:   7656 | Actual: 137.808000 deg | Error: -0.004500 deg
+Target:   140.62 deg | Pulse:   7812 | Actual: 140.616000 deg | Error: -0.009000 deg
+Target:   143.44 deg | Pulse:   7969 | Actual: 143.442000 deg | Error: +0.004500 deg
+Target:   146.25 deg | Pulse:   8125 | Actual: 146.250000 deg | Error: +0.000000 deg
+Target:   149.06 deg | Pulse:   8281 | Actual: 149.058000 deg | Error: -0.004500 deg
+Target:   151.88 deg | Pulse:   8438 | Actual: 151.884000 deg | Error: +0.009000 deg
+Target:   154.69 deg | Pulse:   8594 | Actual: 154.692000 deg | Error: +0.004500 deg
+Target:   157.50 deg | Pulse:   8750 | Actual: 157.500000 deg | Error: +0.000000 deg
+Target:   160.31 deg | Pulse:   8906 | Actual: 160.308000 deg | Error: -0.004500 deg
+Target:   163.12 deg | Pulse:   9062 | Actual: 163.116000 deg | Error: -0.009000 deg
+Target:   165.94 deg | Pulse:   9219 | Actual: 165.942000 deg | Error: +0.004500 deg
+Target:   168.75 deg | Pulse:   9375 | Actual: 168.750000 deg | Error: +0.000000 deg
+Target:   171.56 deg | Pulse:   9531 | Actual: 171.558000 deg | Error: -0.004500 deg
+Target:   174.38 deg | Pulse:   9688 | Actual: 174.384000 deg | Error: +0.009000 deg
+Target:   177.19 deg | Pulse:   9844 | Actual: 177.192000 deg | Error: +0.004500 deg
+Target:   180.00 deg | Pulse:  10000 | Actual: 180.000000 deg | Error: +0.000000 deg
+Target:   182.81 deg | Pulse:  10156 | Actual: 182.808000 deg | Error: -0.004500 deg
+Target:   185.62 deg | Pulse:  10312 | Actual: 185.616000 deg | Error: -0.009000 deg
+Target:   188.44 deg | Pulse:  10469 | Actual: 188.442000 deg | Error: +0.004500 deg
+Target:   191.25 deg | Pulse:  10625 | Actual: 191.250000 deg | Error: +0.000000 deg
+Target:   194.06 deg | Pulse:  10781 | Actual: 194.058000 deg | Error: -0.004500 deg
+Target:   196.88 deg | Pulse:  10938 | Actual: 196.884000 deg | Error: +0.009000 deg
+Target:   199.69 deg | Pulse:  11094 | Actual: 199.692000 deg | Error: +0.004500 deg
+Target:   202.50 deg | Pulse:  11250 | Actual: 202.500000 deg | Error: +0.000000 deg
+Target:   205.31 deg | Pulse:  11406 | Actual: 205.308000 deg | Error: -0.004500 deg
+Target:   208.12 deg | Pulse:  11562 | Actual: 208.116000 deg | Error: -0.009000 deg
+Target:   210.94 deg | Pulse:  11719 | Actual: 210.942000 deg | Error: +0.004500 deg
+Target:   213.75 deg | Pulse:  11875 | Actual: 213.750000 deg | Error: +0.000000 deg
+Target:   216.56 deg | Pulse:  12031 | Actual: 216.558000 deg | Error: -0.004500 deg
+Target:   219.38 deg | Pulse:  12188 | Actual: 219.384000 deg | Error: +0.009000 deg
+Target:   222.19 deg | Pulse:  12344 | Actual: 222.192000 deg | Error: +0.004500 deg
+Target:   225.00 deg | Pulse:  12500 | Actual: 225.000000 deg | Error: +0.000000 deg
+Target:   227.81 deg | Pulse:  12656 | Actual: 227.808000 deg | Error: -0.004500 deg
+Target:   230.62 deg | Pulse:  12812 | Actual: 230.616000 deg | Error: -0.009000 deg
+Target:   233.44 deg | Pulse:  12969 | Actual: 233.442000 deg | Error: +0.004500 deg
+Target:   236.25 deg | Pulse:  13125 | Actual: 236.250000 deg | Error: +0.000000 deg
+Target:   239.06 deg | Pulse:  13281 | Actual: 239.058000 deg | Error: -0.004500 deg
+Target:   241.88 deg | Pulse:  13438 | Actual: 241.884000 deg | Error: +0.009000 deg
+Target:   244.69 deg | Pulse:  13594 | Actual: 244.692000 deg | Error: +0.004500 deg
+Target:   247.50 deg | Pulse:  13750 | Actual: 247.500000 deg | Error: +0.000000 deg
+Target:   250.31 deg | Pulse:  13906 | Actual: 250.308000 deg | Error: -0.004500 deg
+Target:   253.12 deg | Pulse:  14062 | Actual: 253.116000 deg | Error: -0.009000 deg
+Target:   255.94 deg | Pulse:  14219 | Actual: 255.942000 deg | Error: +0.004500 deg
+Target:   258.75 deg | Pulse:  14375 | Actual: 258.750000 deg | Error: +0.000000 deg
+Target:   261.56 deg | Pulse:  14531 | Actual: 261.558000 deg | Error: -0.004500 deg
+Target:   264.38 deg | Pulse:  14688 | Actual: 264.384000 deg | Error: +0.009000 deg
+Target:   267.19 deg | Pulse:  14844 | Actual: 267.192000 deg | Error: +0.004500 deg
+Target:   270.00 deg | Pulse:  15000 | Actual: 270.000000 deg | Error: +0.000000 deg
+Target:   272.81 deg | Pulse:  15156 | Actual: 272.808000 deg | Error: -0.004500 deg
+Target:   275.62 deg | Pulse:  15312 | Actual: 275.616000 deg | Error: -0.009000 deg
+Target:   278.44 deg | Pulse:  15469 | Actual: 278.442000 deg | Error: +0.004500 deg
+Target:   281.25 deg | Pulse:  15625 | Actual: 281.250000 deg | Error: +0.000000 deg
+Target:   284.06 deg | Pulse:  15781 | Actual: 284.058000 deg | Error: -0.004500 deg
+Target:   286.88 deg | Pulse:  15938 | Actual: 286.884000 deg | Error: +0.009000 deg
+Target:   289.69 deg | Pulse:  16094 | Actual: 289.692000 deg | Error: +0.004500 deg
+Target:   292.50 deg | Pulse:  16250 | Actual: 292.500000 deg | Error: +0.000000 deg
+Target:   295.31 deg | Pulse:  16406 | Actual: 295.308000 deg | Error: -0.004500 deg
+Target:   298.12 deg | Pulse:  16562 | Actual: 298.116000 deg | Error: -0.009000 deg
+Target:   300.94 deg | Pulse:  16719 | Actual: 300.942000 deg | Error: +0.004500 deg
+Target:   303.75 deg | Pulse:  16875 | Actual: 303.750000 deg | Error: +0.000000 deg
+Target:   306.56 deg | Pulse:  17031 | Actual: 306.558000 deg | Error: -0.004500 deg
+Target:   309.38 deg | Pulse:  17188 | Actual: 309.384000 deg | Error: +0.009000 deg
+Target:   312.19 deg | Pulse:  17344 | Actual: 312.192000 deg | Error: +0.004500 deg
+Target:   315.00 deg | Pulse:  17500 | Actual: 315.000000 deg | Error: +0.000000 deg
+Target:   317.81 deg | Pulse:  17656 | Actual: 317.808000 deg | Error: -0.004500 deg
+Target:   320.62 deg | Pulse:  17812 | Actual: 320.616000 deg | Error: -0.009000 deg
+Target:   323.44 deg | Pulse:  17969 | Actual: 323.442000 deg | Error: +0.004500 deg
+Target:   326.25 deg | Pulse:  18125 | Actual: 326.250000 deg | Error: +0.000000 deg
+Target:   329.06 deg | Pulse:  18281 | Actual: 329.058000 deg | Error: -0.004500 deg
+Target:   331.88 deg | Pulse:  18438 | Actual: 331.884000 deg | Error: +0.009000 deg
+Target:   334.69 deg | Pulse:  18594 | Actual: 334.692000 deg | Error: +0.004500 deg
+Target:   337.50 deg | Pulse:  18750 | Actual: 337.500000 deg | Error: +0.000000 deg
+Target:   340.31 deg | Pulse:  18906 | Actual: 340.308000 deg | Error: -0.004500 deg
+Target:   343.12 deg | Pulse:  19062 | Actual: 343.116000 deg | Error: -0.009000 deg
+Target:   345.94 deg | Pulse:  19219 | Actual: 345.942000 deg | Error: +0.004500 deg
+Target:   348.75 deg | Pulse:  19375 | Actual: 348.750000 deg | Error: +0.000000 deg
+Target:   351.56 deg | Pulse:  19531 | Actual: 351.558000 deg | Error: -0.004500 deg
+Target:   354.38 deg | Pulse:  19688 | Actual: 354.384000 deg | Error: +0.009000 deg
+Target:   357.19 deg | Pulse:  19844 | Actual: 357.192000 deg | Error: +0.004500 deg
+********************* unwrapped angles *********************
+Target:     0.00 deg | Pulse:      0 | Actual:  0.000000 deg | Error: +0.000000 deg
+Target:     5.62 deg | Pulse:    312 | Actual:  5.616000 deg | Error: -0.009000 deg
+Target:     2.81 deg | Pulse:    156 | Actual:  2.808000 deg | Error: -0.004500 deg
+Target:     8.44 deg | Pulse:    469 | Actual:  8.442000 deg | Error: +0.004500 deg
+Target:    11.25 deg | Pulse:    625 | Actual: 11.250000 deg | Error: +0.000000 deg
+Target:    16.88 deg | Pulse:    938 | Actual: 16.884000 deg | Error: +0.009000 deg
+Target:    14.06 deg | Pulse:    781 | Actual: 14.058000 deg | Error: -0.004500 deg
+Target:    19.69 deg | Pulse:   1094 | Actual: 19.692000 deg | Error: +0.004500 deg
+Target:    22.50 deg | Pulse:   1250 | Actual: 22.500000 deg | Error: +0.000000 deg
+Target:    28.12 deg | Pulse:   1562 | Actual: 28.116000 deg | Error: -0.009000 deg
+Target:    25.31 deg | Pulse:   1406 | Actual: 25.308000 deg | Error: -0.004500 deg
+Target:    30.94 deg | Pulse:   1719 | Actual: 30.942000 deg | Error: +0.004500 deg
+Target:    33.75 deg | Pulse:   1875 | Actual: 33.750000 deg | Error: +0.000000 deg
+Target:    39.38 deg | Pulse:   2188 | Actual: 39.384000 deg | Error: +0.009000 deg
+Target:    36.56 deg | Pulse:   2031 | Actual: 36.558000 deg | Error: -0.004500 deg
+Target:    42.19 deg | Pulse:   2344 | Actual: 42.192000 deg | Error: +0.004500 deg
+Target:    45.00 deg | Pulse:   2500 | Actual: 45.000000 deg | Error: +0.000000 deg
+Target:    50.62 deg | Pulse:   2812 | Actual: 50.616000 deg | Error: -0.009000 deg
+Target:    47.81 deg | Pulse:   2656 | Actual: 47.808000 deg | Error: -0.004500 deg
+Target:    53.44 deg | Pulse:   2969 | Actual: 53.442000 deg | Error: +0.004500 deg
+Target:    56.25 deg | Pulse:   3125 | Actual: 56.250000 deg | Error: +0.000000 deg
+Target:    61.88 deg | Pulse:   3438 | Actual: 61.884000 deg | Error: +0.009000 deg
+Target:    59.06 deg | Pulse:   3281 | Actual: 59.058000 deg | Error: -0.004500 deg
+Target:    64.69 deg | Pulse:   3594 | Actual: 64.692000 deg | Error: +0.004500 deg
+Target:    67.50 deg | Pulse:   3750 | Actual: 67.500000 deg | Error: +0.000000 deg
+Target:    73.12 deg | Pulse:   4062 | Actual: 73.116000 deg | Error: -0.009000 deg
+Target:    70.31 deg | Pulse:   3906 | Actual: 70.308000 deg | Error: -0.004500 deg
+Target:    75.94 deg | Pulse:   4219 | Actual: 75.942000 deg | Error: +0.004500 deg
+Target:    78.75 deg | Pulse:   4375 | Actual: 78.750000 deg | Error: +0.000000 deg
+Target:    84.38 deg | Pulse:   4688 | Actual: 84.384000 deg | Error: +0.009000 deg
+Target:    81.56 deg | Pulse:   4531 | Actual: 81.558000 deg | Error: -0.004500 deg
+Target:    87.19 deg | Pulse:   4844 | Actual: 87.192000 deg | Error: +0.004500 deg
+Target:    90.00 deg | Pulse:   5000 | Actual: 90.000000 deg | Error: +0.000000 deg
+Target:    95.62 deg | Pulse:   5312 | Actual: 95.616000 deg | Error: -0.009000 deg
+Target:    92.81 deg | Pulse:   5156 | Actual: 92.808000 deg | Error: -0.004500 deg
+Target:    98.44 deg | Pulse:   5469 | Actual: 98.442000 deg | Error: +0.004500 deg
+Target:   101.25 deg | Pulse:   5625 | Actual: 101.250000 deg | Error: +0.000000 deg
+Target:   106.88 deg | Pulse:   5938 | Actual: 106.884000 deg | Error: +0.009000 deg
+Target:   104.06 deg | Pulse:   5781 | Actual: 104.058000 deg | Error: -0.004500 deg
+Target:   109.69 deg | Pulse:   6094 | Actual: 109.692000 deg | Error: +0.004500 deg
+Target:   112.50 deg | Pulse:   6250 | Actual: 112.500000 deg | Error: +0.000000 deg
+Target:   118.12 deg | Pulse:   6562 | Actual: 118.116000 deg | Error: -0.009000 deg
+Target:   115.31 deg | Pulse:   6406 | Actual: 115.308000 deg | Error: -0.004500 deg
+Target:   120.94 deg | Pulse:   6719 | Actual: 120.942000 deg | Error: +0.004500 deg
+Target:   123.75 deg | Pulse:   6875 | Actual: 123.750000 deg | Error: -0.000000 deg
+Target:   129.38 deg | Pulse:   7188 | Actual: 129.384000 deg | Error: +0.009000 deg
+Target:   126.56 deg | Pulse:   7031 | Actual: 126.558000 deg | Error: -0.004500 deg
+Target:   132.19 deg | Pulse:   7344 | Actual: 132.192000 deg | Error: +0.004500 deg
+Target:   135.00 deg | Pulse:   7500 | Actual: 135.000000 deg | Error: +0.000000 deg
+Target:   140.62 deg | Pulse:   7812 | Actual: 140.616000 deg | Error: -0.009000 deg
+Target:   137.81 deg | Pulse:   7656 | Actual: 137.808000 deg | Error: -0.004500 deg
+Target:   143.44 deg | Pulse:   7969 | Actual: 143.442000 deg | Error: +0.004500 deg
+Target:   146.25 deg | Pulse:   8125 | Actual: 146.250000 deg | Error: +0.000000 deg
+Target:   151.88 deg | Pulse:   8438 | Actual: 151.884000 deg | Error: +0.009000 deg
+Target:   149.06 deg | Pulse:   8281 | Actual: 149.058000 deg | Error: -0.004500 deg
+Target:   154.69 deg | Pulse:   8594 | Actual: 154.692000 deg | Error: +0.004500 deg
+Target:   157.50 deg | Pulse:   8750 | Actual: 157.500000 deg | Error: +0.000000 deg
+Target:   163.12 deg | Pulse:   9062 | Actual: 163.116000 deg | Error: -0.009000 deg
+Target:   160.31 deg | Pulse:   8906 | Actual: 160.308000 deg | Error: -0.004500 deg
+Target:   165.94 deg | Pulse:   9219 | Actual: 165.942000 deg | Error: +0.004500 deg
+Target:   168.75 deg | Pulse:   9375 | Actual: 168.750000 deg | Error: +0.000000 deg
+Target:   174.38 deg | Pulse:   9688 | Actual: 174.384000 deg | Error: +0.009000 deg
+Target:   171.56 deg | Pulse:   9531 | Actual: 171.558000 deg | Error: -0.004500 deg
+Target:   177.19 deg | Pulse:   9844 | Actual: 177.192000 deg | Error: +0.004500 deg
+Target:   180.00 deg | Pulse:  10000 | Actual: 180.000000 deg | Error: +0.000000 deg
+Target:   185.62 deg | Pulse:  10312 | Actual: 185.616000 deg | Error: -0.009000 deg
+Target:   182.81 deg | Pulse:  10156 | Actual: 182.808000 deg | Error: -0.004500 deg
+Target:   188.44 deg | Pulse:  10469 | Actual: 188.442000 deg | Error: +0.004500 deg
+Target:   191.25 deg | Pulse:  10625 | Actual: 191.250000 deg | Error: +0.000000 deg
+Target:   196.88 deg | Pulse:  10938 | Actual: 196.884000 deg | Error: +0.009000 deg
+Target:   194.06 deg | Pulse:  10781 | Actual: 194.058000 deg | Error: -0.004500 deg
+Target:   199.69 deg | Pulse:  11094 | Actual: 199.692000 deg | Error: +0.004500 deg
+Target:   202.50 deg | Pulse:  11250 | Actual: 202.500000 deg | Error: +0.000000 deg
+Target:   208.12 deg | Pulse:  11562 | Actual: 208.116000 deg | Error: -0.009000 deg
+Target:   205.31 deg | Pulse:  11406 | Actual: 205.308000 deg | Error: -0.004500 deg
+Target:   210.94 deg | Pulse:  11719 | Actual: 210.942000 deg | Error: +0.004500 deg
+Target:   213.75 deg | Pulse:  11875 | Actual: 213.750000 deg | Error: +0.000000 deg
+Target:   219.38 deg | Pulse:  12188 | Actual: 219.384000 deg | Error: +0.009000 deg
+Target:   216.56 deg | Pulse:  12031 | Actual: 216.558000 deg | Error: -0.004500 deg
+Target:   222.19 deg | Pulse:  12344 | Actual: 222.192000 deg | Error: +0.004500 deg
+Target:   225.00 deg | Pulse:  12500 | Actual: 225.000000 deg | Error: +0.000000 deg
+Target:   230.62 deg | Pulse:  12812 | Actual: 230.616000 deg | Error: -0.009000 deg
+Target:   227.81 deg | Pulse:  12656 | Actual: 227.808000 deg | Error: -0.004500 deg
+Target:   233.44 deg | Pulse:  12969 | Actual: 233.442000 deg | Error: +0.004500 deg
+Target:   236.25 deg | Pulse:  13125 | Actual: 236.250000 deg | Error: +0.000000 deg
+Target:   241.88 deg | Pulse:  13438 | Actual: 241.884000 deg | Error: +0.009000 deg
+Target:   239.06 deg | Pulse:  13281 | Actual: 239.058000 deg | Error: -0.004500 deg
+Target:   244.69 deg | Pulse:  13594 | Actual: 244.692000 deg | Error: +0.004500 deg
+Target:   247.50 deg | Pulse:  13750 | Actual: 247.500000 deg | Error: -0.000000 deg
+Target:   253.12 deg | Pulse:  14062 | Actual: 253.116000 deg | Error: -0.009000 deg
+Target:   250.31 deg | Pulse:  13906 | Actual: 250.308000 deg | Error: -0.004500 deg
+Target:   255.94 deg | Pulse:  14219 | Actual: 255.942000 deg | Error: +0.004500 deg
+Target:   258.75 deg | Pulse:  14375 | Actual: 258.750000 deg | Error: +0.000000 deg
+Target:   264.38 deg | Pulse:  14688 | Actual: 264.384000 deg | Error: +0.009000 deg
+Target:   261.56 deg | Pulse:  14531 | Actual: 261.558000 deg | Error: -0.004500 deg
+Target:   267.19 deg | Pulse:  14844 | Actual: 267.192000 deg | Error: +0.004500 deg
+Target:   270.00 deg | Pulse:  15000 | Actual: 270.000000 deg | Error: +0.000000 deg
+Target:   275.62 deg | Pulse:  15312 | Actual: 275.616000 deg | Error: -0.009000 deg
+Target:   272.81 deg | Pulse:  15156 | Actual: 272.808000 deg | Error: -0.004500 deg
+Target:   278.44 deg | Pulse:  15469 | Actual: 278.442000 deg | Error: +0.004500 deg
+Target:   281.25 deg | Pulse:  15625 | Actual: 281.250000 deg | Error: +0.000000 deg
+Target:   286.88 deg | Pulse:  15938 | Actual: 286.884000 deg | Error: +0.009000 deg
+Target:   284.06 deg | Pulse:  15781 | Actual: 284.058000 deg | Error: -0.004500 deg
+Target:   289.69 deg | Pulse:  16094 | Actual: 289.692000 deg | Error: +0.004500 deg
+Target:   292.50 deg | Pulse:  16250 | Actual: 292.500000 deg | Error: +0.000000 deg
+Target:   298.12 deg | Pulse:  16562 | Actual: 298.116000 deg | Error: -0.009000 deg
+Target:   295.31 deg | Pulse:  16406 | Actual: 295.308000 deg | Error: -0.004500 deg
+Target:   300.94 deg | Pulse:  16719 | Actual: 300.942000 deg | Error: +0.004500 deg
+Target:   303.75 deg | Pulse:  16875 | Actual: 303.750000 deg | Error: +0.000000 deg
+Target:   309.38 deg | Pulse:  17188 | Actual: 309.384000 deg | Error: +0.009000 deg
+Target:   306.56 deg | Pulse:  17031 | Actual: 306.558000 deg | Error: -0.004500 deg
+Target:   312.19 deg | Pulse:  17344 | Actual: 312.192000 deg | Error: +0.004500 deg
+Target:   315.00 deg | Pulse:  17500 | Actual: 315.000000 deg | Error: +0.000000 deg
+Target:   320.63 deg | Pulse:  17813 | Actual: 320.634000 deg | Error: +0.009000 deg
+Target:   317.81 deg | Pulse:  17656 | Actual: 317.808000 deg | Error: -0.004500 deg
+Target:   323.44 deg | Pulse:  17969 | Actual: 323.442000 deg | Error: +0.004500 deg
+Target:   326.25 deg | Pulse:  18125 | Actual: 326.250000 deg | Error: +0.000000 deg
+Target:   331.88 deg | Pulse:  18438 | Actual: 331.884000 deg | Error: +0.009000 deg
+Target:   329.06 deg | Pulse:  18281 | Actual: 329.058000 deg | Error: -0.004500 deg
+Target:   334.69 deg | Pulse:  18594 | Actual: 334.692000 deg | Error: +0.004500 deg
+Target:   337.50 deg | Pulse:  18750 | Actual: 337.500000 deg | Error: +0.000000 deg
+Target:   343.12 deg | Pulse:  19062 | Actual: 343.116000 deg | Error: -0.009000 deg
+Target:   340.31 deg | Pulse:  18906 | Actual: 340.308000 deg | Error: -0.004500 deg
+Target:   345.94 deg | Pulse:  19219 | Actual: 345.942000 deg | Error: +0.004500 deg
+Target:   348.75 deg | Pulse:  19375 | Actual: 348.750000 deg | Error: +0.000000 deg
+Target:   354.38 deg | Pulse:  19688 | Actual: 354.384000 deg | Error: +0.009000 deg
+Target:   351.56 deg | Pulse:  19531 | Actual: 351.558000 deg | Error: -0.004500 deg
+Target:   357.19 deg | Pulse:  19844 | Actual: 357.192000 deg | Error: +0.004500 deg
+Creato: risultati_multitimbir_N32_K4_PSO20000.xlsx
