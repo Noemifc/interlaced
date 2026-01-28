@@ -72,14 +72,14 @@ class InterlacedScan:
             group_br_list.append(group_br)
             idx_list.append(idx)
 
-        # --- Salvo in attributi "dedicati" TIMBIR (acq order)
+        # --- attributi "dedicati" TIMBIR (acq order)
         self.theta_timbir_acq = np.array(theta, dtype=float)
         self.theta_timbir_acq_unwrapped = np.rad2deg(np.unwrap(np.deg2rad(self.theta_timbir_acq)))
         self.group_timbir = np.array(group_indices, dtype=int)
         self.group_br_timbir = np.array(group_br_list, dtype=int)
         self.idx_timbir = np.array(idx_list, dtype=int)
 
-        # --- Se ti servono ancora questi per plot/altro
+        # --- per plot 
         self.theta_interlaced = np.sort(theta)
         self.theta_interlaced_unwrapped = np.rad2deg(np.unwrap(np.deg2rad(theta)))
 
