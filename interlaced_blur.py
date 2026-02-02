@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 # ------------------------
 detector_x_size = 2048  # horizontal detector size in pixels
 r = detector_x_size / 2  # radius in pixels
+speeds = np.linspace(0.05, 2.0, 200) # velocita'
 
 # ------------------------
 # Exposure times to evaluate (s)
@@ -48,7 +49,10 @@ plt.grid(True)
 plt.legend()
 plt.show()
 
-#Funzioni aggiuntive 
+
+# ----------------------------
+# Funzioni aggiuntive 
+# ----------------------------
 
 #dato il limite di blur -> dammi exopur massimo entro i lim
 
@@ -65,7 +69,7 @@ for speed in [0.2, 0.8]:                                                        
 # ----------------------------
 
 # dati per il plot: tmax vs speed
-speeds = np.linspace(0.05, 2.0, 200)
+
 tmax_1px  = t_max_for_blur(1.0, r, speeds)
 tmax_05px = t_max_for_blur(0.5, r, speeds)
 
@@ -109,10 +113,6 @@ plt.legend()
 plt.ylim(bottom=1e-4)   
 plt.yscale("log")
 plt.show()
-
-# ----------------------------
-# methods 
-# ----------------------------
 
 
 
