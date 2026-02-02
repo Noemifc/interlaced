@@ -59,13 +59,19 @@ def t_max_for_blur(b_px, r_px, speed_deg_s):
 for speed in [0.2, 0.8]:                                                         #tes con due velocita'
     print(speed, "deg/s -> t_max(1px) =", t_max_for_blur(1.0, r, speed), "s")
     print(speed, "deg/s -> t_max(0.5px) =", t_max_for_blur(0.5, r, speed), "s")
-    
-# plot tmax di esposizione vs velocità del motore per un dato limite di blur
+
+# ----------------------------
+# Plot
+# ----------------------------
+
+# dati per il plot: tmax vs speed
 speeds = np.linspace(0.05, 2.0, 200)
-#soglie di blur
 tmax_1px  = t_max_for_blur(1.0, r, speeds)
 tmax_05px = t_max_for_blur(0.5, r, speeds)
 
+# ----------------------------
+# plot lineare 
+# ----------------------------
 plt.figure(figsize=(7,5))
 plt.plot(speeds, tmax_1px,  label="t_max per blur = 1 px")
 plt.plot(speeds, tmax_05px, label="t_max per blur = 0.5 px")
@@ -77,16 +83,32 @@ for s in [0.2, 0.8]:
 
 plt.xlabel("Motor speed [deg/s]")
 plt.ylabel("Max exposure time [s]")
-plt.title("Max exposure time vs motor speed (dato un limite di blur)")
+plt.title("Max exposure time vs motor speed (linear)")
 plt.grid(True)
 plt.legend()
-plt.ylim(bottom=1e-4)    
-plt.yscale("log")         # scala log 
+plt.ylim(bottom=0)
 plt.show()
 
+# ----------------------------
+# plot log
+# ----------------------------
+plt.figure(figsize=(7,5))
+plt.plot(speeds, tmax_1px,  label="t_max per blur = 1 px")
+plt.plot(speeds, tmax_05px, label="t_max per blur = 0.5 px")
 
+for s in [0.2, 0.8]:
+    plt.axvline(s, linestyle="--")
+    plt.scatter([s], [t_max_for_blur(1.0, r, s)], zorder=3)
+    plt.text(s, t_max_for_blur(1.0, r, s), f"  {s} deg/s", va="bottom")
 
-
+plt.xlabel("Motor speed [deg/s]")
+plt.ylabel("Max exposure time [s]")
+plt.title("Max exposure time vs motor speed (log y)")
+plt.grid(True)
+plt.legend()
+plt.ylim(bottom=1e-4)   
+plt.yscale("log")
+plt.show()
 
 
 
