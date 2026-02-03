@@ -44,6 +44,8 @@ class InterlacedScan:
 
         # Distanza angolare nominale
         self.rotation_step = (rotation_stop - rotation_start) / (num_angles - 1)
+  
+
 
     # =========================================================
     # MODE
