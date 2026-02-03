@@ -1,3 +1,4 @@
+```python
 import numpy as np
 import math
 import matplotlib.pyplot as plt
@@ -46,15 +47,47 @@ class InterlacedScan:
         self.rotation_step = (rotation_stop - rotation_start) / (num_angles - 1)
 
         # Liste angoli utili
-        self.theta_fpga = None                    # angoli finali da mandare alla FPGA sequenza monotona nel tempo
-        self.theta_acq_mod = None                 # angoli di acquisizione ripiegati in (mod 360)
-        self.theta_sorted_mod = None              # come sopra ma ordinati crescenti solo per analisi/copertura, non ordine reale
-        self.theta_acq_unwrapped_monotono = None  # angoli di acquisizione unwrap e monotoni (0..360..720..)
+        self.theta_fpga = None                    # angoli finali da mandare alla FPGA (monotoni nel tempo)
+        self.theta_acq_mod = None                 # angoli in ordine reale di acquisizione (mod 360)
+        self.theta_sorted_mod = None              # angoli (mod 360) ordinati (solo analisi copertura)
+        self.theta_acq_unwrapped_monotono = None  # unwrap monotono (0..360..720..)
 
-        self.theta_interlaced = None              # sequenza angolare nominale generata dal metodo interlacciato
-        self.theta_interlaced_unwrapped = None    # versione unwrap della sequenza interlacciata (continua su più giri)
+        # Alias/compatibilità (tenuti ma non usati come sorgente nelle funzioni successive)
+        self.theta_interlaced = None
+        self.theta_interlaced_unwrapped = None
 
-        self.angles_all = None                    # contenitore con tutte le liste/colonne angolari (per plot/export/debug)
+        # contenitore completo per export/debug
+        self.angles_all = None
+
+        # variabili moto/counts
+        self.theta_vec = None
+        self.t_vec = None
+        self.t_real = None
+        self.theta_real = None
+
+        self.PSOCountsIdeal = None
+        self.PSOCountsTaxiCorrected = None
+        self.PSOCountsFinal = None
+
+    # ----------------------------------------------------------------------
+    # helper: unwrap monotono (FPGA-style)
+    # ----------------------------------------------------------------------
+    def unwrap_monotone(self, theta_mod):
+        out = np.asarray(theta_mod, dtype=float).copy()
+        for i in range(1, len(out)):
+            while out[i] < out[i - 1]:
+                out[i] += 360.0
+        return out
+
+    def _require_theta_fpga(self):
+        if self.theta_fpga is None:
+            raise ValueError("theta_fpga è None: devi chiamare prima un generate_*().")
+
+    # ----------------------------------------------------------------------
+    # bit reverse
+    # ----------------------------------------------------------------------
+    def bit_reverse(self, n, bits):
+        return int(f"{n:0{bits}b}"[::-1], 2) if bits > 0 else int(n)
 
     # =========================================================
     # MODE
@@ -79,29 +112,23 @@ class InterlacedScan:
             theta.append(angle_deg)
             group_indices.append(group)
 
-        # array "ordine reale di acquisizione" in [0,360)
         theta = np.asarray(theta, dtype=float)
 
-        # Angoli in ordine di acquisizione (mod 360)
+        # ordine reale (mod 360)
         self.theta_acq_mod = theta.copy()
 
-        # Angoli mod 360 ordinati -> solo analisi di copertura, NON ordine temporale
+        # per copertura
         self.theta_sorted_mod = np.sort(self.theta_acq_mod)
 
-        # Angoli "unwrap" monotoni nel tempo: garantito sempre crescente
-        theta_unw = self.theta_acq_mod.copy()
-        for i in range(1, len(theta_unw)):
-            while theta_unw[i] < theta_unw[i - 1]:
-                theta_unw[i] += 360.0
+        # FPGA: unwrap monotono nel tempo
+        self.theta_fpga = self.unwrap_monotone(self.theta_acq_mod)
+        self.theta_acq_unwrapped_monotono = self.theta_fpga.copy()
 
-        self.theta_acq_unwrapped_monotono = theta_unw
-        self.theta_fpga = theta_unw.copy()
-
-        # Alias/compatibilità con i nomi precedenti
+        # alias/compatibilità
         self.theta_interlaced = self.theta_sorted_mod
-        self.theta_interlaced_unwrapped = self.theta_acq_unwrapped_monotono
+        self.theta_interlaced_unwrapped = self.theta_fpga
 
-        # Pacchetto completo per export
+        # pacchetto export/debug
         self.angles_all = {
             "n": np.arange(self.num_angles),
             "group": np.asarray(group_indices, dtype=int),
@@ -111,7 +138,7 @@ class InterlacedScan:
             "theta_fpga": self.theta_fpga,
         }
 
-        # plots
+        # plot
         group_indices = np.array(group_indices)
         radii = 1 - group_indices * 0.15
 
@@ -124,11 +151,11 @@ class InterlacedScan:
             fontsize=13
         )
 
-        ax.plot(np.deg2rad(theta), radii, "-o", lw=1.2, ms=5, alpha=0.8, color="tab:blue")
+        ax.plot(np.deg2rad(self.theta_acq_mod), radii, "-o", lw=1.2, ms=5, alpha=0.8, color="tab:blue")
 
         for i in range(self.num_angles):
             ax.text(
-                np.deg2rad(theta[i]),
+                np.deg2rad(self.theta_acq_mod[i]),
                 radii[i] + 0.03,
                 str(group_indices[i] + 1),
                 ha="center",
@@ -139,9 +166,6 @@ class InterlacedScan:
         ax.set_rticks([])
         plt.show()
 
-    def bit_reverse(self, n, bits):
-        return int(f"{n:0{bits}b}"[::-1], 2) if bits > 0 else int(n)
-
     # ----------------------------------------------------------------------
     #   multi-TIMBIR
     # ----------------------------------------------------------------------
@@ -150,62 +174,51 @@ class InterlacedScan:
         bits = int(np.log2(self.K_interlace)) if self.K_interlace > 1 else 0
 
         theta = []
-        group_indices = []   # qui = loop (già bit-reversed)
+        loop_br_list = []
         i_list = []
         g_list = []
         idx_list = []
 
         assert (self.K_interlace & (self.K_interlace - 1)) == 0
 
-        # i = indice "step" (0..num_angles-1)
-        # g = indice loop nominale (0..K-1)
+        # i = step (0..N-1), g = loop nominale (0..K-1)
         for i in range(self.num_angles):
             for g in range(self.K_interlace):
-                loop = self.bit_reverse(g, bits) if bits > 0 else g   # ordine temporale dei loop (bit-reversal)
-                idx = i * self.K_interlace + loop                     # 0..N*K-1
+                loop_br = self.bit_reverse(g, bits) if bits > 0 else g
+                idx = i * self.K_interlace + loop_br
                 angle_deg = idx * 360.0 / (self.num_angles * self.K_interlace)
 
                 theta.append(angle_deg)
-                group_indices.append(loop)
-
+                loop_br_list.append(loop_br)
                 i_list.append(i)
                 g_list.append(g)
                 idx_list.append(idx)
 
-        # ------------------------
-        # liste angoli (multi-TIMBIR)
-        # ------------------------
         theta = np.asarray(theta, dtype=float)
-        group_indices = np.asarray(group_indices, dtype=int)
+        loop_br_list = np.asarray(loop_br_list, dtype=int)
         i_list = np.asarray(i_list, dtype=int)
         g_list = np.asarray(g_list, dtype=int)
         idx_list = np.asarray(idx_list, dtype=int)
 
-        # Angoli in ordine di acquisizione, ripiegati in [0,360)
+        # ordine reale (mod 360)
         self.theta_acq_mod = np.mod(theta, 360.0)
 
-        # Angoli mod 360 ordinati (solo analisi copertura)
+        # per copertura
         self.theta_sorted_mod = np.sort(self.theta_acq_mod)
 
-        # Unwrap monotono GARANTITO (FPGA-style): se scende, aggiungo 360 finché risale
-        theta_unw = self.theta_acq_mod.copy()
-        for k in range(1, len(theta_unw)):
-            while theta_unw[k] < theta_unw[k - 1]:
-                theta_unw[k] += 360.0
+        # FPGA: unwrap monotono nel tempo
+        self.theta_fpga = self.unwrap_monotone(self.theta_acq_mod)
+        self.theta_acq_unwrapped_monotono = self.theta_fpga.copy()
 
-        self.theta_acq_unwrapped_monotono = theta_unw
-        self.theta_fpga = theta_unw.copy()
-
-        # Alias/compatibilità con i nomi precedenti
+        # alias/compatibilità
         self.theta_interlaced = self.theta_sorted_mod
-        self.theta_interlaced_unwrapped = self.theta_acq_unwrapped_monotono
+        self.theta_interlaced_unwrapped = self.theta_fpga
 
-        # Pacchetto completo per export/debug
         self.angles_all = {
             "acq_n": np.arange(self.num_angles * self.K_interlace),
             "i": i_list,
             "g": g_list,
-            "loop_br": group_indices,
+            "loop_br": loop_br_list,
             "idx": idx_list,
             "theta_acq_mod": self.theta_acq_mod,
             "theta_sorted_mod": self.theta_sorted_mod,
@@ -213,12 +226,9 @@ class InterlacedScan:
             "theta_fpga": self.theta_fpga,
         }
 
-        # ------------------------
-        # plots
-        # ------------------------
-        # Cerchi separati per loop
+        # plot (cerchi per loop_br)
         step = 0.8 / max(self.K_interlace - 1, 1)
-        radii = 1.0 - group_indices * step
+        radii = 1.0 - loop_br_list * step
 
         fig = plt.figure(figsize=(7, 7))
         ax = fig.add_subplot(111, polar=True)
@@ -231,7 +241,7 @@ class InterlacedScan:
 
         ax.plot(np.deg2rad(self.theta_acq_mod), radii, "o", lw=1.2, ms=5, alpha=0.8)
 
-        for ang, r, lp in zip(self.theta_acq_mod, radii, group_indices):
+        for ang, r, lp in zip(self.theta_acq_mod, radii, loop_br_list):
             ax.text(
                 np.deg2rad(ang),
                 r + 0.03,
@@ -254,7 +264,7 @@ class InterlacedScan:
 
         angles_all = []
 
-        # Loop 0: base (dentro [0,360))
+        # Loop 0 (base in [0,360))
         base = np.array([(self.rotation_start + i * golden_angle) % 360.0
                          for i in range(self.num_angles)], dtype=float)
         base = np.sort(base)
@@ -265,15 +275,11 @@ class InterlacedScan:
             offset = (k / (self.num_angles + 1.0)) * 360.0 * phi_inv
             angles_all.append(np.sort((base + offset) % 360.0))
 
-        # ------------------------
-        # Ordine di acquisizione (time): interleaving dei loop
-        # ------------------------
+        # ordine di acquisizione (time): interleaving loop
         theta_time = []
         loop_time = []
 
-        # Se vuoi, qui puoi imporre un ordine loop diverso (es. bit-reversal)
-        loop_order = list(range(self.K_interlace))
-
+        loop_order = list(range(self.K_interlace))  # puoi cambiarlo (es. bit-reversal) se vuoi
         for i in range(self.num_angles):
             for k in loop_order:
                 theta_time.append(angles_all[k][i])
@@ -282,26 +288,20 @@ class InterlacedScan:
         theta_time = np.asarray(theta_time, dtype=float)
         loop_time = np.asarray(loop_time, dtype=int)
 
-        # ------------------------
-        # Liste angoli (Golden)
-        # ------------------------
-        self.theta_acq_mod = np.mod(theta_time, 360.0)          # ordine reale (mod 360)
-        self.theta_sorted_mod = np.sort(self.theta_acq_mod)     # solo copertura (non temporale)
+        # ordine reale (mod 360)
+        self.theta_acq_mod = np.mod(theta_time, 360.0)
 
-        # Unwrap monotono GARANTITO (FPGA-style)
-        theta_unw = self.theta_acq_mod.copy()
-        for j in range(1, len(theta_unw)):
-            while theta_unw[j] < theta_unw[j - 1]:
-                theta_unw[j] += 360.0
+        # per copertura
+        self.theta_sorted_mod = np.sort(self.theta_acq_mod)
 
-        self.theta_acq_unwrapped_monotono = theta_unw
-        self.theta_fpga = theta_unw.copy()
+        # FPGA: unwrap monotono nel tempo
+        self.theta_fpga = self.unwrap_monotone(self.theta_acq_mod)
+        self.theta_acq_unwrapped_monotono = self.theta_fpga.copy()
 
-        # Alias/compatibilità
+        # alias/compatibilità
         self.theta_interlaced = self.theta_sorted_mod
-        self.theta_interlaced_unwrapped = self.theta_acq_unwrapped_monotono
+        self.theta_interlaced_unwrapped = self.theta_fpga
 
-        # Pacchetto completo per export/debug
         self.angles_all = {
             "acq_n": np.arange(self.num_angles * self.K_interlace),
             "loop": loop_time,
@@ -330,7 +330,6 @@ class InterlacedScan:
 
     def print_cumulative_angles_table(self, angles_all):
         cumulative = [angles_all[0].copy()]
-
         for k in range(1, len(angles_all)):
             prev_max = cumulative[-1].max()
             cumulative.append(angles_all[k] + np.ceil(prev_max / 360) * 360)
@@ -380,24 +379,43 @@ class InterlacedScan:
             angles_all.append(base + k * 360.0)
 
         theta_unwrapped = np.concatenate(angles_all)
-        theta = np.mod(theta_unwrapped, 360.0)
+        theta_mod = np.mod(theta_unwrapped, 360.0)
 
-        self.theta_interlaced = np.array(theta)
-        self.theta_interlaced_unwrapped = np.array(theta_unwrapped)
+        # ordine reale (mod 360)
+        self.theta_acq_mod = theta_mod.copy()
+
+        # per copertura
+        self.theta_sorted_mod = np.sort(self.theta_acq_mod)
+
+        # FPGA: unwrap monotono nel tempo
+        self.theta_fpga = self.unwrap_monotone(self.theta_acq_mod)
+        self.theta_acq_unwrapped_monotono = self.theta_fpga.copy()
+
+        # alias/compatibilità
+        self.theta_interlaced = self.theta_sorted_mod
+        self.theta_interlaced_unwrapped = self.theta_fpga
 
         if self.K_interlace > 1:
-            self.rotation_stop = theta_unwrapped[-1]
+            self.rotation_stop = float(self.theta_fpga[-1])
+
+        self.angles_all = {
+            "acq_n": np.arange(self.num_angles * self.K_interlace),
+            "theta_acq_mod": self.theta_acq_mod,
+            "theta_sorted_mod": self.theta_sorted_mod,
+            "theta_fpga": self.theta_fpga,
+        }
 
         return angles_all
 
     def plot_equally_loops_polar_kturns(self):
 
-        theta_unwrapped = self.theta_interlaced_unwrapped
+        self._require_theta_fpga()
+
+        theta_unwrapped = self.theta_fpga
         theta_mod = np.mod(theta_unwrapped, 360.0)
 
         fig = plt.figure(figsize=(7, 7))
         ax = fig.add_subplot(111, polar=True)
-
         ax.set_title(
             f"Equally Spaced Acquisition (N={self.num_angles}, K={self.K_interlace})\n"
             "Each loop on its own circle",
@@ -415,7 +433,8 @@ class InterlacedScan:
             ax.plot(np.deg2rad(theta_k), radii, "-o", lw=1.2, ms=5, alpha=0.85)
 
             for i, ang in enumerate(theta_k):
-                ax.text(np.deg2rad(ang), radii[i] + 0.03, str(k + 1), ha="center", va="bottom", fontsize=8)
+                ax.text(np.deg2rad(ang), radii[i] + 0.03, str(k + 1),
+                        ha="center", va="bottom", fontsize=8)
 
         ax.set_rticks([])
         ax.set_theta_zero_location("N")
@@ -468,30 +487,48 @@ class InterlacedScan:
 
         n = np.arange(N)
         angles_all = []
-
         for k in range(K):
             theta_n = self.rotation_start + (n + k / K) * delta_theta
             angles_all.append(theta_n)
 
         theta_unwrapped = np.concatenate(angles_all)
-        theta = np.mod(theta_unwrapped, 360.0)
+        theta_mod = np.mod(theta_unwrapped, 360.0)
 
-        self.theta_interlaced = np.array(theta)
-        self.theta_interlaced_unwrapped = np.array(theta_unwrapped)
+        # ordine reale (mod 360)
+        self.theta_acq_mod = theta_mod.copy()
+
+        # per copertura
+        self.theta_sorted_mod = np.sort(self.theta_acq_mod)
+
+        # FPGA: unwrap monotono nel tempo
+        self.theta_fpga = self.unwrap_monotone(self.theta_acq_mod)
+        self.theta_acq_unwrapped_monotono = self.theta_fpga.copy()
+
+        # alias/compatibilità
+        self.theta_interlaced = self.theta_sorted_mod
+        self.theta_interlaced_unwrapped = self.theta_fpga
 
         if self.K_interlace > 1:
-            self.rotation_stop = theta_unwrapped[-1]
+            self.rotation_stop = float(self.theta_fpga[-1])
+
+        self.angles_all = {
+            "acq_n": np.arange(self.num_angles * self.K_interlace),
+            "theta_acq_mod": self.theta_acq_mod,
+            "theta_sorted_mod": self.theta_sorted_mod,
+            "theta_fpga": self.theta_fpga,
+        }
 
         return angles_all
 
     def plot_equally_loops_polar_multiturns(self):
 
-        theta_unwrapped = self.theta_interlaced_unwrapped
+        self._require_theta_fpga()
+
+        theta_unwrapped = self.theta_fpga
         theta_mod = np.mod(theta_unwrapped, 360.0)
 
         fig = plt.figure(figsize=(7, 7))
         ax = fig.add_subplot(111, polar=True)
-
         ax.set_title(
             f"Equally Spaced Acquisition (N={self.num_angles}, K={self.K_interlace})\n"
             "Each loop on its own circle",
@@ -509,7 +546,8 @@ class InterlacedScan:
             ax.plot(np.deg2rad(theta_k), radii, "-o", lw=1.2, ms=5, alpha=0.85)
 
             for i, ang in enumerate(theta_k):
-                ax.text(np.deg2rad(ang), radii[i] + 0.03, str(k + 1), ha="center", va="bottom", fontsize=8)
+                ax.text(np.deg2rad(ang), radii[i] + 0.03, str(k + 1),
+                        ha="center", va="bottom", fontsize=8)
 
         ax.set_rticks([])
         ax.set_theta_zero_location("N")
@@ -546,7 +584,7 @@ class InterlacedScan:
             print()
 
     # =========================================================
-    # VAN DER CORPUT INTERLACED – K-TURN
+    # VAN DER CORPUT INTERLACED (ordine temporale + theta_fpga)
     # =========================================================
     def generate_interlaced_corput(self, delta_theta=None):
 
@@ -563,52 +601,62 @@ class InterlacedScan:
         bitsK = int(np.ceil(np.log2(K))) if K > 1 else 0
         MK = 1 << bitsK if bitsK > 0 else 1
 
-        p_corput = np.array([self.bit_reverse(i, bitsK) for i in range(MK)])
+        p_corput = np.array([self.bit_reverse(i, bitsK) for i in range(MK)], dtype=int)
         p_corput = p_corput[p_corput < K]
         assert len(p_corput) == K
 
         offsets = (p_corput / K) * delta_theta if K > 0 else np.array([0.0])
 
-        angles_all = []
-
-        bits = int(np.ceil(np.log2(self.num_angles))) if self.num_angles > 1 else 0
-        M = 1 << bits if bits > 0 else 1
-
-        indices = np.array([self.bit_reverse(i, bits) for i in range(M)])
+        bitsN = int(np.ceil(np.log2(self.num_angles))) if self.num_angles > 1 else 0
+        MN = 1 << bitsN if bitsN > 0 else 1
+        indices = np.array([self.bit_reverse(i, bitsN) for i in range(MN)], dtype=int)
         indices = indices[indices < self.num_angles]
 
+        angles_all = []
         for k in range(K):
             offset = offsets[k]
             loop_angles = base[indices] + offset
-
             loop_angles_mod = np.mod(loop_angles - self.rotation_start, 360.0) + self.rotation_start
-            loop_angles_unwrapped = loop_angles_mod + 360.0 * k
+            angles_all.append(loop_angles_mod)
 
-            angles_all.append(loop_angles_unwrapped)
+        # ordine reale di acquisizione (qui: concateno loop 0,1,2,...)
+        theta_time_mod = np.concatenate(angles_all)
 
-        theta_unwrapped_unsorted = np.concatenate(angles_all)
-        theta_unsorted = np.mod(theta_unwrapped_unsorted - self.rotation_start, 360.0) + self.rotation_start
+        self.theta_acq_mod = np.mod(theta_time_mod, 360.0)
+        self.theta_sorted_mod = np.sort(self.theta_acq_mod)
 
-        theta_unwrapped = np.sort(theta_unwrapped_unsorted)
-        theta = np.sort(theta_unsorted)
+        self.theta_fpga = self.unwrap_monotone(self.theta_acq_mod)
+        self.theta_acq_unwrapped_monotono = self.theta_fpga.copy()
 
-        self.theta_interlaced = np.array(theta)
-        self.theta_interlaced_unwrapped = np.array(theta_unwrapped)
+        self.theta_interlaced = self.theta_sorted_mod
+        self.theta_interlaced_unwrapped = self.theta_fpga
 
         if self.K_interlace > 1:
-            self.rotation_stop = float(theta_unwrapped[-1])
+            self.rotation_stop = float(self.theta_fpga[-1])
+
+        self.angles_all = {
+            "acq_n": np.arange(self.num_angles * self.K_interlace),
+            "theta_acq_mod": self.theta_acq_mod,
+            "theta_sorted_mod": self.theta_sorted_mod,
+            "theta_fpga": self.theta_fpga,
+            "indices_br": indices,
+            "offsets": offsets,
+            "p_corput": p_corput,
+        }
 
         return angles_all
 
     def plot_equally_loops_polar_corput(self):
 
-        theta_unwrapped = self.theta_interlaced_unwrapped
+        self._require_theta_fpga()
+
+        theta_unwrapped = self.theta_fpga
         theta_mod = np.mod(theta_unwrapped, 360.0)
 
         fig = plt.figure(figsize=(7, 7))
         ax = fig.add_subplot(111, polar=True)
         ax.set_title(
-            f"Interlaced Van der Corput K-Turn (N={self.num_angles}, K={self.K_interlace})",
+            f"Interlaced Van der Corput (time-order) (N={self.num_angles}, K={self.K_interlace})",
             va="bottom",
             fontsize=13
         )
@@ -623,7 +671,8 @@ class InterlacedScan:
             ax.plot(np.deg2rad(theta_k), radii, "-o", lw=1.2, ms=5, alpha=0.85)
 
             for i, ang in enumerate(theta_k):
-                ax.text(np.deg2rad(ang), radii[i] + 0.03, str(k + 1), ha="center", va="bottom", fontsize=8)
+                ax.text(np.deg2rad(ang), radii[i] + 0.03, str(k + 1),
+                        ha="center", va="bottom", fontsize=8)
 
         ax.set_rticks([])
         ax.set_theta_zero_location("N")
@@ -633,7 +682,7 @@ class InterlacedScan:
     def print_angles_table_corput(self, angles_all):
         print(f"{'Idx':>5}", end="")
         for k in range(len(angles_all)):
-            print(f"{f'Loop {k + 1} K-Turn':>15}", end="")
+            print(f"{f'Loop {k + 1}':>15}", end="")
         print()
 
         for i in range(len(angles_all[0])):
@@ -650,7 +699,7 @@ class InterlacedScan:
 
         print(f"{'Idx':>5}", end="")
         for k in range(len(cumulative)):
-            print(f"{f'Loop {k + 1} K-Turn':>18}", end="")
+            print(f"{f'Loop {k + 1}':>18}", end="")
         print()
 
         for i in range(len(cumulative[0])):
@@ -661,13 +710,13 @@ class InterlacedScan:
 
     def plot_live_corput(self):
 
-        theta_unwrapped = self.theta_interlaced_unwrapped
-        theta_mod = np.mod(theta_unwrapped, 360.0)
+        self._require_theta_fpga()
 
-        fig, ax = plt.subplots(figsize=(9, 5))
-
+        theta_mod = np.mod(self.theta_fpga, 360.0)
         n_total = len(theta_mod)
         indices = np.arange(n_total)
+
+        fig, ax = plt.subplots(figsize=(9, 5))
 
         for k in range(self.K_interlace):
             start = k * self.num_angles
@@ -677,12 +726,11 @@ class InterlacedScan:
             ax.plot(indices[start:stop], theta_mod[start:stop], lw=0.6, alpha=0.4)
 
         ax.set_title(
-            f"Live Acquisition Order – Van der Corput (N={self.num_angles}, K={self.K_interlace})",
+            f"Live Acquisition Order – Van der Corput (time-order) (N={self.num_angles}, K={self.K_interlace})",
             fontsize=13
         )
-
         ax.set_xlabel("Acquisition index")
-        ax.set_ylabel("Angle [deg]")
+        ax.set_ylabel("Angle [deg] (mod 360)")
         ax.set_ylim(0, 360)
         ax.grid(True, alpha=0.3)
         ax.legend()
@@ -691,20 +739,22 @@ class InterlacedScan:
         plt.show()
 
     # ----------------------------------------------------------------------
-    #   plot delta (Δθ consecutivi, ordine acquisizione)
+    #   Δθ consecutivi (ordine acquisizione FPGA = theta_fpga)
     # ----------------------------------------------------------------------
     def plotdelta(self, metodo=""):
 
-        theta = np.array(self.theta_interlaced_unwrapped, dtype=float)
+        self._require_theta_fpga()
+
+        theta = np.asarray(self.theta_fpga, dtype=float)
         dtheta = np.diff(theta)
 
-        print(f"\n--- Δθ ({metodo}) ---")
+        print(f"\n--- Δθ (theta_fpga) ({metodo}) ---")
         for i, d in enumerate(dtheta):
             print(f"{i:4d} -> {i+1:4d}: {d:9.3f} deg")
 
         fig, ax = plt.subplots(figsize=(9, 4))
         ax.plot(np.arange(1, len(theta)), dtheta, "o")
-        ax.set_title(f"Δθ tra angoli consecutivi – {metodo}")
+        ax.set_title(f"Δθ tra angoli consecutivi (theta_fpga) – {metodo}")
         ax.set_xlabel("Indice acquisizione")
         ax.set_ylabel("Δθ [deg]")
         ax.grid(True, alpha=0.3)
@@ -712,20 +762,22 @@ class InterlacedScan:
         plt.show()
 
     # ----------------------------------------------------------------------
-    #   plot delta (Δθ sort)
+    #   Δθ sort (copertura su mod 360, derivato da theta_fpga)
     # ----------------------------------------------------------------------
     def plotdelta_sort(self, metodo=""):
 
-        theta = np.sort(np.array(self.theta_interlaced, dtype=float))
-        dtheta = np.diff(theta)
+        self._require_theta_fpga()
 
-        print(f"\n--- Δθ sort ({metodo}) ---")
+        theta_mod_sorted = np.sort(np.mod(np.asarray(self.theta_fpga, dtype=float), 360.0))
+        dtheta = np.diff(theta_mod_sorted)
+
+        print(f"\n--- Δθ sort (mod da theta_fpga) ({metodo}) ---")
         for i, d in enumerate(dtheta):
             print(f"{i:4d} -> {i+1:4d}: {d:9.3f} deg")
 
         fig, ax = plt.subplots(figsize=(9, 4))
-        ax.plot(np.arange(1, len(theta)), dtheta, "o")
-        ax.set_title(f"Δθ sort – {metodo}")
+        ax.plot(np.arange(1, len(theta_mod_sorted)), dtheta, "o")
+        ax.set_title(f"Δθ sort (mod da theta_fpga) – {metodo}")
         ax.set_xlabel("Indice (sorted)")
         ax.set_ylabel("Δθ [deg]")
         ax.grid(True, alpha=0.3)
@@ -733,7 +785,7 @@ class InterlacedScan:
         plt.show()
 
     # ----------------------------------------------------------------------
-    #           FUNZIONI
+    #           FUNZIONI (moto/counts)
     # ----------------------------------------------------------------------
     def compute_senses(self):
 
@@ -774,11 +826,13 @@ class InterlacedScan:
         self.theta_classic = self.rotation_start_new + np.arange(self.num_angles) * self.rotation_step
 
     # ----------------------------------------------------------------------
-    # Modello taxi
+    # Modello taxi (usa theta_fpga)
     # ----------------------------------------------------------------------
     def simulate_taxi_motion(self, omega_target=10, dt=1e-4):
 
-        theta_max = float(np.max(self.theta_interlaced_unwrapped))
+        self._require_theta_fpga()
+
+        theta_max = float(np.max(self.theta_fpga))
 
         accel = decel = omega_target / self.RotationAccelTime
 
@@ -804,34 +858,46 @@ class InterlacedScan:
 
     def compute_real_motion(self):
 
-        self.t_real = np.interp(self.theta_interlaced_unwrapped, self.theta_vec, self.t_vec)
+        self._require_theta_fpga()
+
+        self.t_real = np.interp(self.theta_fpga, self.theta_vec, self.t_vec)
         self.theta_real = np.interp(self.t_real, self.t_vec, self.theta_vec)
 
     def convert_angles_to_counts(self):
 
+        self._require_theta_fpga()
+
         pulses_per_degree = self.PSOCountsPerRotation / 360.0
 
-        self.PSOCountsIdeal = np.round(self.theta_interlaced_unwrapped * pulses_per_degree).astype(int)
+        theta_unw = np.asarray(self.theta_fpga, dtype=float)
+        theta_mod = np.mod(theta_unw, 360.0)
+
+        # counts ideal (basati su theta_fpga)
+        self.PSOCountsIdeal = np.round(theta_unw * pulses_per_degree).astype(int)
 
         if np.any(np.diff(self.PSOCountsIdeal) <= 0):
             print("WARNING: counts non strettamente crescenti (duplicati/inversioni).")
 
+        # counts corretti dal taxi model
         self.PSOCountsTaxiCorrected = np.round(self.theta_real * pulses_per_degree).astype(int)
         self.PSOCountsFinal = self.PSOCountsTaxiCorrected.copy()
 
-        pulse_counts = np.round(self.theta_interlaced / 360.0 * self.PSOCountsPerRotation).astype(int)
-        actual_angles = pulse_counts / pulses_per_degree
-        angular_error = actual_angles - self.theta_interlaced
+        # stampa MOD 360 (derivato da theta_fpga)
+        pulse_counts_mod = np.round(theta_mod / 360.0 * self.PSOCountsPerRotation).astype(int)
+        actual_mod = pulse_counts_mod / pulses_per_degree
+        err_mod = actual_mod - theta_mod
 
-        for a, p, act, err in zip(self.theta_interlaced, pulse_counts, actual_angles, angular_error):
+        print("********************* mod 360 (da theta_fpga) *********************")
+        for a, p, act, err in zip(theta_mod, pulse_counts_mod, actual_mod, err_mod):
             print(f"Target: {a:8.2f} deg | Pulse: {p:6d} | Actual: {act:9.6f} deg | Error: {err:+.6f} deg")
 
-        print("********************* unwrapped angles *********************")
-        pulse_counts = np.round(self.theta_interlaced_unwrapped / 360.0 * self.PSOCountsPerRotation).astype(int)
-        actual_angles = pulse_counts / pulses_per_degree
-        angular_error = actual_angles - self.theta_interlaced_unwrapped
+        # stampa UNWRAPPED (theta_fpga)
+        pulse_counts_unw = np.round(theta_unw / 360.0 * self.PSOCountsPerRotation).astype(int)
+        actual_unw = pulse_counts_unw / pulses_per_degree
+        err_unw = actual_unw - theta_unw
 
-        for a, p, act, err in zip(self.theta_interlaced_unwrapped, pulse_counts, actual_angles, angular_error):
+        print("********************* unwrapped (theta_fpga) *********************")
+        for a, p, act, err in zip(theta_unw, pulse_counts_unw, actual_unw, err_unw):
             print(f"Target: {a:8.2f} deg | Pulse: {p:6d} | Actual: {act:9.6f} deg | Error: {err:+.6f} deg")
 
     def plot_all_comparisons(self):
@@ -865,26 +931,26 @@ class InterlacedScan:
 
     def plot(self):
 
+        self._require_theta_fpga()
+
         pulses_per_degree = self.PSOCountsPerRotation / 360.0
 
-        # plot MOD 360
-        x1 = self.theta_interlaced
-        y1 = np.round(x1 * pulses_per_degree).astype(int)
+        x2 = np.asarray(self.theta_fpga, dtype=float)  # UNWRAPPED = FPGA
+        x1 = np.mod(x2, 360.0)                         # MOD 360 derivato
 
-        # plot UNWRAPPED
-        x2 = self.theta_interlaced_unwrapped
+        y1 = np.round(x1 * pulses_per_degree).astype(int)
         y2 = np.round(x2 * pulses_per_degree).astype(int)
 
         fig, axs = plt.subplots(2, 1, figsize=(10, 8))
 
         axs[0].plot(x1, y1, "o-")
-        axs[0].set_title("MOD 360: Angolo vs Impulsi")
+        axs[0].set_title("MOD 360 (da theta_fpga): Angolo vs Impulsi")
         axs[0].set_xlabel("Angolo [deg]")
         axs[0].set_ylabel("Impulsi encoder")
         axs[0].grid(True)
 
         axs[1].plot(x2, y2, "s-")
-        axs[1].set_title("UNWRAPPED: Angolo vs Impulsi")
+        axs[1].set_title("UNWRAPPED (theta_fpga): Angolo vs Impulsi")
         axs[1].set_xlabel("Angolo unwrapped [deg]")
         axs[1].set_ylabel("Impulsi encoder")
         axs[1].grid(True)
@@ -893,7 +959,7 @@ class InterlacedScan:
         plt.show()
 
     # ----------------------------------------------------------------------
-    #   Export Excel
+    #   Export Excel (usa theta_fpga)
     # ----------------------------------------------------------------------
     def export_to_excel(self, filename="risultati.xlsx"):
         try:
@@ -906,27 +972,32 @@ class InterlacedScan:
         except ImportError as e:
             raise ImportError("Manca openpyxl. Installa con: pip install openpyxl") from e
 
+        self._require_theta_fpga()
+
         pulses_per_degree = self.PSOCountsPerRotation / 360.0
 
-        # -------- MOD 360 --------
-        pulse_counts_mod = np.round(self.theta_interlaced / 360.0 * self.PSOCountsPerRotation).astype(int)
+        theta_unw = np.asarray(self.theta_fpga, dtype=float)
+        theta_mod = np.mod(theta_unw, 360.0)
+
+        # -------- MOD 360 (da theta_fpga) --------
+        pulse_counts_mod = np.round(theta_mod / 360.0 * self.PSOCountsPerRotation).astype(int)
         actual_mod = pulse_counts_mod / pulses_per_degree
-        err_mod = actual_mod - self.theta_interlaced
+        err_mod = actual_mod - theta_mod
 
         df_mod = pd.DataFrame({
-            "target_deg": self.theta_interlaced,
+            "target_deg": theta_mod,
             "pulse": pulse_counts_mod,
             "actual_deg": actual_mod,
             "error_deg": err_mod
         })
 
-        # -------- UNWRAPPED --------
-        pulse_counts_unw = np.round(self.theta_interlaced_unwrapped / 360.0 * self.PSOCountsPerRotation).astype(int)
+        # -------- UNWRAPPED (theta_fpga) --------
+        pulse_counts_unw = np.round(theta_unw / 360.0 * self.PSOCountsPerRotation).astype(int)
         actual_unw = pulse_counts_unw / pulses_per_degree
-        err_unw = actual_unw - self.theta_interlaced_unwrapped
+        err_unw = actual_unw - theta_unw
 
         df_unw = pd.DataFrame({
-            "target_deg": self.theta_interlaced_unwrapped,
+            "target_deg": theta_unw,
             "pulse": pulse_counts_unw,
             "actual_deg": actual_unw,
             "error_deg": err_unw
@@ -934,19 +1005,18 @@ class InterlacedScan:
 
         # -------- Confronto counts --------
         df_counts = pd.DataFrame({
-            "theta_unwrapped_deg": self.theta_interlaced_unwrapped,
+            "theta_fpga_unwrapped_deg": theta_unw,
             "counts_ideal": self.PSOCountsIdeal,
             "counts_taxi": self.PSOCountsTaxiCorrected,
             "counts_final": self.PSOCountsFinal
         })
 
         # -------- Δθ --------
-        theta = np.array(self.theta_interlaced_unwrapped, dtype=float)
         df_delta = pd.DataFrame({
-            "i": np.arange(len(theta) - 1),
-            "theta_i": theta[:-1],
-            "theta_ip1": theta[1:],
-            "delta_theta": np.diff(theta)
+            "i": np.arange(len(theta_unw) - 1),
+            "theta_i": theta_unw[:-1],
+            "theta_ip1": theta_unw[1:],
+            "delta_theta": np.diff(theta_unw)
         })
 
         with pd.ExcelWriter(filename, engine="openpyxl") as w:
@@ -968,7 +1038,8 @@ def main():
         choices=["timbir", "golden", "kturns", "multiturns", "corput", "multitimbir"],
         default="timbir"
     )
-    parser.add_argument("--PSOCountsPerRotation", type=int, default=20, help="PSO counts per rotation (default: 20)")
+    parser.add_argument("--PSOCountsPerRotation", type=int, default=20000,
+                        help="PSO counts per rotation (default: 20000)")
 
     args = parser.parse_args()
 
@@ -1016,7 +1087,7 @@ def main():
         scan.plot_live_corput()
         scan.plotdelta("corput")
 
-    # sorted / motion
+    # motion + counts (ora TUTTO basato su theta_fpga)
     scan.compute_positions_PSO()
     scan.simulate_taxi_motion()
     scan.compute_real_motion()
@@ -1032,5 +1103,7 @@ def main():
 if __name__ == "__main__":
     main()
 
-# python Tomoscan_pso_interlaced.py  --mode multitimbir  --num_angles 32 --K_interlace 4 --PSOCountsPerRotation 20000  > multitimbir_32_4_20000_output.txt
+# Esempi:
+# python Tomoscan_pso_interlaced.py --mode multitimbir --num_angles 32 --K_interlace 4 --PSOCountsPerRotation 20000 > multitimbir_32_4_20000_output.txt
 # python -m py_compile Tomoscan_pso_interlaced.py
+```
