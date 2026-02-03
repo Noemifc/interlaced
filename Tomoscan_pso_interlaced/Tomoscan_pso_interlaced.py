@@ -68,8 +68,8 @@ class InterlacedScan:
             theta.append(angle_deg)
             group_indices.append(group)
 
-        self.theta_interlaced = np.sort(theta)
-        self.theta_interlaced_unwrapped = np.rad2deg(np.unwrap(np.deg2rad(theta)))
+        self.theta_interlaced = np.sort(theta)     # ordinati mod360
+        self.theta_interlaced_unwrapped = np.rad2deg(np.unwrap(np.deg2rad(theta))) # non sort ma time acquisition
 
         group_indices = np.array(group_indices)
         radii = 1 - group_indices * 0.15
@@ -122,8 +122,8 @@ class InterlacedScan:
                 theta.append(angle_deg)
                 group_indices.append(loop)
 
-        self.theta_interlaced = np.sort(theta)
-        self.theta_interlaced_unwrapped = np.rad2deg(np.unwrap(np.deg2rad(theta)))
+        self.theta_interlaced = np.sort(theta)                 # ordinati
+        self.theta_interlaced_unwrapped = np.rad2deg(np.unwrap(np.deg2rad(theta)))   # ordine di acquisizione 
 
         theta = np.array(theta, dtype=float)
         group_indices = np.array(group_indices, dtype=int)
@@ -176,8 +176,8 @@ class InterlacedScan:
 
         theta = np.sort(np.concatenate(angles_all))
 
-        self.theta_interlaced = theta
-        self.theta_interlaced_unwrapped = np.rad2deg(np.unwrap(np.deg2rad(theta)))
+        self.theta_interlaced = theta          # ordinati 
+        self.theta_interlaced_unwrapped = np.rad2deg(np.unwrap(np.deg2rad(theta)))  # unwrap di lista già ordinata
 
         return angles_all
 
@@ -250,8 +250,8 @@ class InterlacedScan:
         theta_unwrapped = np.concatenate(angles_all)
         theta = np.mod(theta_unwrapped, 360.0)
 
-        self.theta_interlaced = np.array(theta)
-        self.theta_interlaced_unwrapped = np.array(theta_unwrapped)
+        self.theta_interlaced = np.array(theta)                     # ordine di concatenazione dei loop, poi mod 360
+        self.theta_interlaced_unwrapped = np.array(theta_unwrapped) # monotona crescente
 
         if self.K_interlace > 1:
             self.rotation_stop = theta_unwrapped[-1]
@@ -344,8 +344,8 @@ class InterlacedScan:
         theta_unwrapped = np.concatenate(angles_all)
         theta = np.mod(theta_unwrapped, 360.0)
 
-        self.theta_interlaced = np.array(theta)
-        self.theta_interlaced_unwrapped = np.array(theta_unwrapped)
+        self.theta_interlaced = np.array(theta)               # non ordinati 
+        self.theta_interlaced_unwrapped = np.array(theta_unwrapped)  # non sempre monotono 
 
         if self.K_interlace > 1:
             self.rotation_stop = theta_unwrapped[-1]
@@ -458,10 +458,10 @@ class InterlacedScan:
         theta_unsorted = np.mod(theta_unwrapped_unsorted - self.rotation_start, 360.0) + self.rotation_start
 
         theta_unwrapped = np.sort(theta_unwrapped_unsorted)
-        theta = np.sort(theta_unsorted)
+        theta = np.sort(theta_unsorted)  
 
-        self.theta_interlaced = np.array(theta)
-        self.theta_interlaced_unwrapped = np.array(theta_unwrapped)
+        self.theta_interlaced = np.array(theta)                         # ordinati 
+        self.theta_interlaced_unwrapped = np.array(theta_unwrapped)     # ordinati  
 
         if self.K_interlace > 1:
             self.rotation_stop = float(theta_unwrapped[-1])
