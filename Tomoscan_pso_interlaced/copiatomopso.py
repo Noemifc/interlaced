@@ -143,84 +143,178 @@ class InterlacedScan:
         return int(f"{n:0{bits}b}"[::-1], 2) if bits > 0 else int(n)
 
     # ----------------------------------------------------------------------
-    #   multi-TIMBIR
-    # ----------------------------------------------------------------------
-    def generate_interlaced_multitimbir(self):
+#   multi-TIMBIR
+# ----------------------------------------------------------------------
+def generate_interlaced_multitimbir(self):
 
-        bits = int(np.log2(self.K_interlace)) if self.K_interlace > 1 else 0
-        theta = []
-        group_indices = []
+    bits = int(np.log2(self.K_interlace)) if self.K_interlace > 1 else 0
 
-        assert (self.K_interlace & (self.K_interlace - 1)) == 0
+    theta = []
+    group_indices = []   # qui = loop (già bit-reversed)
+    i_list = []
+    g_list = []
+    idx_list = []
 
-        # i = indice nel loop da 0 a num_angles
-        # g = indice temporale nel loop da 0 a K loops
-        for i in range(self.num_angles):
-            for g in range(self.K_interlace):
-                loop = self.bit_reverse(g, bits) if bits > 0 else g  # ordine temporale (bit-reversal)
-                idx = i * self.K_interlace + loop                   # 0..N*K-1
-                angle_deg = idx * 360.0 / (self.num_angles * self.K_interlace)
-                theta.append(angle_deg)
-                group_indices.append(loop)
+    assert (self.K_interlace & (self.K_interlace - 1)) == 0
 
-        self.theta_interlaced = np.sort(theta)  # ordinati
-        self.theta_interlaced_unwrapped = np.rad2deg(np.unwrap(np.deg2rad(theta)))  # ordine di acquisizione
+    # i = indice "step" (0..num_angles-1)
+    # g = indice loop nominale (0..K-1)
+    for i in range(self.num_angles):
+        for g in range(self.K_interlace):
+            loop = self.bit_reverse(g, bits) if bits > 0 else g   # ordine temporale dei loop (bit-reversal)
+            idx  = i * self.K_interlace + loop                    # 0..N*K-1
+            angle_deg = idx * 360.0 / (self.num_angles * self.K_interlace)
 
-        theta = np.array(theta, dtype=float)
-        group_indices = np.array(group_indices, dtype=int)
+            theta.append(angle_deg)
+            group_indices.append(loop)
 
-        # Cerchi separati per loop
-        step = 0.8 / max(self.K_interlace - 1, 1)
-        radii = 1.0 - group_indices * step
+            i_list.append(i)
+            g_list.append(g)
+            idx_list.append(idx)
 
-        fig = plt.figure(figsize=(7, 7))
-        ax = fig.add_subplot(111, polar=True)
-        ax.set_title(
-            f"Multi-TIMBIR: N={self.num_angles} per loop, K={self.K_interlace} → totale N·K={self.num_angles*self.K_interlace} angoli\n"
-            "Loop su cerchi separati con ordine loop = bit-reversal",
+    # ------------------------
+    # liste angoli (multi-TIMBIR)
+    # ------------------------
+    theta = np.asarray(theta, dtype=float)
+    group_indices = np.asarray(group_indices, dtype=int)
+    i_list = np.asarray(i_list, dtype=int)
+    g_list = np.asarray(g_list, dtype=int)
+    idx_list = np.asarray(idx_list, dtype=int)
+
+    # Angoli in ordine di acquisizione, ripiegati in [0,360)
+    self.theta_acq_mod = np.mod(theta, 360.0)
+
+    # Angoli mod 360 ordinati (solo analisi copertura)
+    self.theta_sorted_mod = np.sort(self.theta_acq_mod)
+
+    # Unwrap monotono GARANTITO (FPGA-style): se scende, aggiungo 360 finché risale
+    theta_unw = self.theta_acq_mod.copy()
+    for k in range(1, len(theta_unw)):
+        while theta_unw[k] < theta_unw[k - 1]:
+            theta_unw[k] += 360.0
+
+    self.theta_acq_unwrapped_monotono = theta_unw
+    self.theta_fpga = theta_unw.copy()
+
+    # Alias/compatibilità con i nomi precedenti
+    self.theta_interlaced = self.theta_sorted_mod
+    self.theta_interlaced_unwrapped = self.theta_acq_unwrapped_monotono
+
+    # Pacchetto completo per export/debug
+    self.angles_all = {
+        "acq_n": np.arange(self.num_angles * self.K_interlace),
+        "i": i_list,
+        "g": g_list,
+        "loop_br": group_indices,
+        "idx": idx_list,
+        "theta_acq_mod": self.theta_acq_mod,
+        "theta_sorted_mod": self.theta_sorted_mod,
+        "theta_acq_unwrapped_monotono": self.theta_acq_unwrapped_monotono,
+        "theta_fpga": self.theta_fpga,
+    }
+
+    # ------------------------
+    # plots
+    # ------------------------
+    # Cerchi separati per loop
+    step = 0.8 / max(self.K_interlace - 1, 1)
+    radii = 1.0 - group_indices * step
+
+    fig = plt.figure(figsize=(7, 7))
+    ax = fig.add_subplot(111, polar=True)
+    ax.set_title(
+        f"Multi-TIMBIR: N={self.num_angles} per loop, K={self.K_interlace} → totale N·K={self.num_angles*self.K_interlace} angoli\n"
+        "Loop su cerchi separati con ordine loop = bit-reversal",
+        va="bottom",
+        fontsize=12
+    )
+
+    ax.plot(np.deg2rad(self.theta_acq_mod), radii, "o", lw=1.2, ms=5, alpha=0.8)
+
+    for ang, r, lp in zip(self.theta_acq_mod, radii, group_indices):
+        ax.text(
+            np.deg2rad(ang),
+            r + 0.03,
+            str(lp + 1),
+            ha="center",
             va="bottom",
-            fontsize=12
+            fontsize=8
         )
 
-        ax.plot(np.deg2rad(theta), radii, "o", lw=1.2, ms=5, alpha=0.8)
+    ax.set_rticks([])
+    plt.show()
 
-        for ang, r, lp in zip(theta, radii, group_indices):
-            ax.text(
-                np.deg2rad(ang),
-                r + 0.03,
-                str(lp + 1),
-                ha="center",
-                va="bottom",
-                fontsize=8
-            )
 
-        ax.set_rticks([])
-        plt.show()
-
+    
     # ----------------------------------------------------------------------
-    #   GOLDEN ANGLE
-    # ----------------------------------------------------------------------
-    def generate_interlaced_goldenangle(self):
+#   GOLDEN ANGLE
+# ----------------------------------------------------------------------
+def generate_interlaced_goldenangle(self):
 
-        golden_angle = 360 * (3 - np.sqrt(5)) / 2
-        phi_inv = (np.sqrt(5) - 1) / 2
+    golden_angle = 360.0 * (3.0 - np.sqrt(5.0)) / 2.0
+    phi_inv = (np.sqrt(5.0) - 1.0) / 2.0
 
-        angles_all = []
+    angles_all = []
 
-        base = np.array([(self.rotation_start + i * golden_angle) % 360 for i in range(self.num_angles)])
-        base = np.sort(base)
-        angles_all.append(base)
+    # Loop 0: base (dentro [0,360))
+    base = np.array([(self.rotation_start + i * golden_angle) % 360.0
+                     for i in range(self.num_angles)], dtype=float)
+    base = np.sort(base)
+    angles_all.append(base)
 
-        for k in range(1, self.K_interlace):
-            offset = (k / (self.num_angles + 1)) * 360 * phi_inv
-            angles_all.append(np.sort((base + offset) % 360))
+    # Loop 1..K-1: offset deterministici
+    for k in range(1, self.K_interlace):
+        offset = (k / (self.num_angles + 1.0)) * 360.0 * phi_inv
+        angles_all.append(np.sort((base + offset) % 360.0))
 
-        theta = np.sort(np.concatenate(angles_all))
+    # ------------------------
+    # Ordine di acquisizione (time): interleaving dei loop
+    # ------------------------
+    theta_time = []
+    loop_time = []
 
-        self.theta_interlaced = theta
-        self.theta_interlaced_unwrapped = np.rad2deg(np.unwrap(np.deg2rad(theta)))
+    # Se vuoi, qui puoi imporre un ordine loop diverso (es. bit-reversal)
+    loop_order = list(range(self.K_interlace))
 
-        return angles_all
+    for i in range(self.num_angles):
+        for k in loop_order:
+            theta_time.append(angles_all[k][i])
+            loop_time.append(k)
+
+    theta_time = np.asarray(theta_time, dtype=float)
+    loop_time = np.asarray(loop_time, dtype=int)
+
+    # ------------------------
+    # Liste angoli (Golden)
+    # ------------------------
+    self.theta_acq_mod = np.mod(theta_time, 360.0)          # ordine reale (mod 360)
+    self.theta_sorted_mod = np.sort(self.theta_acq_mod)     # solo copertura (non temporale)
+
+    # Unwrap monotono GARANTITO (FPGA-style)
+    theta_unw = self.theta_acq_mod.copy()
+    for j in range(1, len(theta_unw)):
+        while theta_unw[j] < theta_unw[j - 1]:
+            theta_unw[j] += 360.0
+
+    self.theta_acq_unwrapped_monotono = theta_unw
+    self.theta_fpga = theta_unw.copy()
+
+    # Alias/compatibilità
+    self.theta_interlaced = self.theta_sorted_mod
+    self.theta_interlaced_unwrapped = self.theta_acq_unwrapped_monotono
+
+    # Pacchetto completo per export/debug
+    self.angles_all = {
+        "acq_n": np.arange(self.num_angles * self.K_interlace),
+        "loop": loop_time,
+        "theta_acq_mod": self.theta_acq_mod,
+        "theta_sorted_mod": self.theta_sorted_mod,
+        "theta_acq_unwrapped_monotono": self.theta_acq_unwrapped_monotono,
+        "theta_fpga": self.theta_fpga,
+    }
+
+    return angles_all
+
 
     # ----------------------------------------------------------------------
     # Tabelle e plot Golden
