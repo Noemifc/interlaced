@@ -44,6 +44,18 @@ class InterlacedScan:
 
         # Distanza angolare nominale
         self.rotation_step = (rotation_stop - rotation_start) / (num_angles - 1)
+        
+        # Liste angoli utili
+        self.theta_fpga = None                    # angoli finali da mandare alla FPGA sequenza monotona nel tempo
+        self.theta_acq_mod = None                 # angoli di acquisizione ripiegati in   (mod 360)
+        self.theta_sorted_mod = None              # come sopra ma ordinati crescenti solo per analisi/copertura, non ordine reale
+        self.theta_acq_unwrapped_monotono = None  # angoli di acquisizione unwrap e monotoni (0..360..720..)
+
+        self.theta_interlaced = None              # sequenza angolare nominale generata dal metodo interlacciato
+        self.theta_interlaced_unwrapped = None    # versione unwrap della sequenza interlacciata (continua su più giri)
+
+         self.angles_all = None                    # contenitore con tutte le liste/colonne angolari (per plot/export/debug)
+
   
 
 
@@ -69,9 +81,57 @@ class InterlacedScan:
             angle_deg = (idx % self.num_angles) * 360.0 / self.num_angles
             theta.append(angle_deg)
             group_indices.append(group)
+            
+            # ------------------------
+            # liste angoli (TIMBIR)
+            # ------------------------
 
-        self.theta_interlaced = np.sort(theta)     # ordinati mod360
-        self.theta_interlaced_unwrapped = np.rad2deg(np.unwrap(np.deg2rad(theta))) # non sort ma time acquisition
+                                                                         
+        # array "ordine reale di acquisizione" in [0,360)  
+        theta = np.asarray(theta, dtype=float)
+
+        # Angoli in ordine di acquisizione (mod 360)
+        self.theta_acq_mod = theta.copy()
+
+        # Angoli mod 360 ordinati -> solo analisi di copertura, NON ordine temporale
+        self.theta_sorted_mod = np.sort(self.theta_acq_mod)
+
+        # Angoli unwrap monotoni nel tempo (0..360..720..)
+        self.theta_acq_unwrapped_monotono = np.rad2deg(
+            np.unwrap(np.deg2rad(self.theta_acq_mod))
+        )
+
+        # Angoli da mandare alla FPGA (monotoni)
+        self.theta_fpga = self.theta_acq_unwrapped_monotono.copy()
+
+
+        # Angoli "unwrap" monotoni nel tempo: garantito sempre crescente
+         theta_unw = self.theta_acq_mod.copy()
+         for i in range(1, len(theta_unw)):
+              while theta_unw[i] < theta_unw[i-1]:
+                  theta_unw[i] += 360.0
+          self.theta_acq_unwrapped_monotono = theta_unw
+          self.theta_fpga = theta_unw.copy()
+
+
+        # Alias/compatibilità con i nomi precedenti 
+        self.theta_interlaced = self.theta_sorted_mod
+        self.theta_interlaced_unwrapped = self.theta_acq_unwrapped_monotono
+
+        # Pacchetto completo per export
+        self.angles_all = {
+            "n": np.arange(self.num_angles),
+            "group": np.asarray(group_indices, dtype=int),
+            "theta_acq_mod": self.theta_acq_mod,
+            "theta_sorted_mod": self.theta_sorted_mod,
+            "theta_acq_unwrapped_monotono": self.theta_acq_unwrapped_monotono,
+            "theta_fpga": self.theta_fpga,
+        }
+
+        
+
+
+        # plots
 
         group_indices = np.array(group_indices)
         radii = 1 - group_indices * 0.15
