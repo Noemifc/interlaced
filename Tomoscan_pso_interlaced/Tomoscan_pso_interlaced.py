@@ -65,7 +65,7 @@ class InterlacedScan:
             group_br = self.bit_reverse(group, bits)
             idx = n * self.K_interlace + group_br
             # angle_deg = (idx % self.num_angles) * 360.0 / self.num_angles    #qui prende angoli mod360, toglie info relativo al loop
-            andle_deg = idx * 360.0 / self.num_angles
+            angle_deg = idx * 360.0 / self.num_angles
             theta.append(angle_deg)
             group_indices.append(group)
 
