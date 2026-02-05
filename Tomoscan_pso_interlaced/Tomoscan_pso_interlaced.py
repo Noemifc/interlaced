@@ -129,8 +129,8 @@ class InterlacedScan:
             for g in range(self.K_interlace):
                 loop = self.bit_reverse(g, bits)                 # ordine temporale (bit-reversal)
                 idx = i * self.K_interlace + loop                # 0..N*K-1
-                # angle_deg = idx * 360.0 / (self.num_angles * self.K_interlace)   #qui prendo angoli di tutti i loop n*K 
-                angle_deg = idx * 360.0 / (self.num_angles) 
+                angle_deg = idx * 360.0 / (self.num_angles * self.K_interlace)   #qui prendo angoli di tutti i loop n*K 
+                # angle_deg = idx * 360.0 / (self.num_angles) 
                 theta.append(angle_deg)
                 group_indices.append(loop)
 
