@@ -18,6 +18,7 @@ class InterlacedScan:
         rotation_stop=360.0,
         num_angles=32,
         PSOCountsPerRotation=20000,
+        PSOPulsePerRotation=11840158,
         RotationDirection=0,
         RotationAccelTime=0.15,
         exposure=0.01,
@@ -36,6 +37,7 @@ class InterlacedScan:
         self.PSOCountsPerRotation = PSOCountsPerRotation
         self.RotationDirection = RotationDirection
         self.RotationAccelTime = RotationAccelTime
+        self.PSOPulsePerRotation = PSOPulsePerRotation
 
         # Parametri camera
         self.exposure = exposure
@@ -104,10 +106,16 @@ class InterlacedScan:
     def bit_reverse(self, n, bits):
         return int(f"{n:0{bits}b}"[::-1], 2)
 
+    ''' ora la funzione prende anche gli angoli maggiori di 360 , se voglio prendere gli angoli,
+    qui soto producendo solo n campioni  come da definizione iniziale timbir, per questo gli schemi saranno uguali 
+    per tutti i loop ovvero n*K devo generare n*k acquisizioni e questolo ritrovo in multi timbir'''
+
     # ----------------------------------------------------------------------
     #   multi-TIMBIR
     # ----------------------------------------------------------------------
     def generate_interlaced_multitimbir(self):
+        ''' ordine acquisizione timir-like : per ogni posizione i dentro il giro acquisisco k loop in ordine bit-rev
+        K giri, con N punti per giro.'''
 
         bits = int(np.log2(self.K_interlace))
         theta = []
@@ -121,7 +129,8 @@ class InterlacedScan:
             for g in range(self.K_interlace):
                 loop = self.bit_reverse(g, bits)                 # ordine temporale (bit-reversal)
                 idx = i * self.K_interlace + loop                # 0..N*K-1
-                angle_deg = idx * 360.0 / (self.num_angles * self.K_interlace)
+                # angle_deg = idx * 360.0 / (self.num_angles * self.K_interlace)   #qui prendo angoli di tutti i loop n*K 
+                angle_deg = idx * 360.0 / (self.num_angles) 
                 theta.append(angle_deg)
                 group_indices.append(loop)
 
