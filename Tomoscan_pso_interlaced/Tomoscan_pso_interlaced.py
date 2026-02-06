@@ -848,7 +848,7 @@ def main():
         choices=["timbir", "golden", "kturns", "multiturns", "corput", "multitimbir"],
         default="timbir"
     )
-    parser.add_argument("--PSOCountsPerRotation", type=int, default=20, help="PSO counts per rotation (default: 20)")
+    parser.add_argument("--PSOCountsPerRotation", type=int, default=20000, help="PSO counts per rotation (default: 20)")
 
     args = parser.parse_args()
 
