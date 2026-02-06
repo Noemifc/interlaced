@@ -596,6 +596,25 @@ class InterlacedScan:
         plt.tight_layout()
         plt.show()
 
+    def plotdelta_sort(self, metodo=""):
+
+    theta = self.get_theta_for_motion()
+    dtheta = np.diff(theta)
+
+    print(f"\n--- Δθ ({metodo}) usando theta_monotonic ---")
+    for i, d in enumerate(dtheta):
+        print(f"{i:4d} -> {i+1:4d}: {d:9.3f} deg")
+
+    fig, ax = plt.subplots(figsize=(9, 4))
+    ax.plot(np.arange(1, len(theta)), dtheta, "o")
+    ax.set_title(f"Δθ tra angoli consecutivi (theta_monotonic) – {metodo}")
+    ax.set_xlabel("Indice (ordine monotono)")
+    ax.set_ylabel("Δθ [deg]")
+    ax.grid(True, alpha=0.3)
+    plt.tight_layout()
+    plt.show()
+
+
 
 
 
@@ -653,7 +672,7 @@ class InterlacedScan:
     # ----------------------------------------------------------------------
     def simulate_taxi_motion(self, omega_target=10, dt=1e-4):
 
-        theta_max = float(np.max(self.theta_interlaced_unwrapped))
+        theta_max = float(np.max(self.self.theta_monotonic))
 
         accel = decel = omega_target / self.RotationAccelTime
 
@@ -679,14 +698,14 @@ class InterlacedScan:
 
     def compute_real_motion(self):
 
-        self.t_real = np.interp(self.theta_interlaced_unwrapped, self.theta_vec, self.t_vec)
+        self.t_real = np.interp(self.self.theta_monotonic, self.theta_vec, self.t_vec)
         self.theta_real = np.interp(self.t_real, self.t_vec, self.theta_vec)
 
     def convert_angles_to_counts(self):
 
         pulses_per_degree = self.PSOCountsPerRotation / 360.0
 
-        self.PSOCountsIdeal = np.round(self.theta_interlaced_unwrapped * pulses_per_degree).astype(int)
+        self.PSOCountsIdeal = np.round(self.self.theta_monotonic * pulses_per_degree).astype(int)
 
         if np.any(np.diff(self.PSOCountsIdeal) <= 0):
             print("WARNING: counts non strettamente crescenti (duplicati/inversioni).")
@@ -702,7 +721,7 @@ class InterlacedScan:
             print(f"Target: {a:8.2f} deg | Pulse: {p:6d} | Actual: {act:9.6f} deg | Error: {err:+.6f} deg")
 
         print("********************* unwrapped angles *********************")
-        pulse_counts = np.round(self.theta_interlaced_unwrapped / 360.0 * self.PSOCountsPerRotation).astype(int)
+        pulse_counts = np.round(self.self.theta_monotonic / 360.0 * self.PSOCountsPerRotation).astype(int)
         actual_angles = pulse_counts / pulses_per_degree
         angular_error = actual_angles - self.theta_interlaced_unwrapped
 
@@ -809,17 +828,29 @@ class InterlacedScan:
             "actual_deg": actual_unw,
             "error_deg": err_unw
         })
+         # -------- MONOTONIC (ordine crescente) --------
+        pulse_counts_unw = np.round(self.theta_monotonic / 360.0 * self.PSOCountsPerRotation).astype(int)
+        actual_unw = pulse_counts_unw / pulses_per_degree
+        err_unw = actual_unw - self.theta_monotonic
+
+        df_unw = pd.DataFrame({
+            "target_deg": self.theta_monotonic,
+            "pulse": pulse_counts_unw,
+            "actual_deg": actual_unw,
+            "error_deg": err_unw
+        })
+
 
         # -------- Confronto counts (ideal/taxi/final) --------
         df_counts = pd.DataFrame({
-            "theta_unwrapped_deg": self.theta_interlaced_unwrapped,
+            "theta_unwrapped_deg": self.theta_monotonic,
             "counts_ideal": self.PSOCountsIdeal,
             "counts_taxi": self.PSOCountsTaxiCorrected,
             "counts_final": self.PSOCountsFinal
         })
 
-        # -------- Δθ --------
-        theta = np.array(self.theta_interlaced_unwrapped, dtype=float)
+        # -------- Δθ monotonic  --------
+        theta = np.array(self.theta_monotonic, dtype=float)
         df_delta = pd.DataFrame({
             "i": np.arange(len(theta) - 1),
             "theta_i": theta[:-1],
