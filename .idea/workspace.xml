@@ -5,7 +5,17 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="bde65259-e763-419c-a053-6adee03228cb" name="Changes" comment="equally spaced con plot e k loop">
+      <change afterPath="$PROJECT_DIR$/Tomoscan_pso_interlaced/live_plots.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/shelf/Uncommitted_changes_before_rebase_[Changes]/shelved.patch" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/shelf/Uncommitted_changes_before_rebase__Changes_.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Tomoscan_pso_interlaced/Tomoscan_pso_interlaced.py" beforeDir="false" afterPath="$PROJECT_DIR$/Tomoscan_pso_interlaced/Tomoscan_pso_interlaced.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Tomoscan_pso_interlaced/risultati_corput_N32_K4_PSO20000.xlsx" beforeDir="false" afterPath="$PROJECT_DIR$/Tomoscan_pso_interlaced/risultati_corput_N32_K4_PSO20000.xlsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Tomoscan_pso_interlaced/risultati_golden_N32_K4_PSO20000.xlsx" beforeDir="false" afterPath="$PROJECT_DIR$/Tomoscan_pso_interlaced/risultati_golden_N32_K4_PSO20000.xlsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Tomoscan_pso_interlaced/risultati_kturns_N32_K4_PSO20000.xlsx" beforeDir="false" afterPath="$PROJECT_DIR$/Tomoscan_pso_interlaced/risultati_kturns_N32_K4_PSO20000.xlsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Tomoscan_pso_interlaced/risultati_multitimbir_N32_K4_PSO20000.xlsx" beforeDir="false" afterPath="$PROJECT_DIR$/Tomoscan_pso_interlaced/risultati_multitimbir_N32_K4_PSO20000.xlsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Tomoscan_pso_interlaced/risultati_multiturns_N32_K4_PSO20000.xlsx" beforeDir="false" afterPath="$PROJECT_DIR$/Tomoscan_pso_interlaced/risultati_multiturns_N32_K4_PSO20000.xlsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Tomoscan_pso_interlaced/risultati_timbir_N32_K4_PSO20000.xlsx" beforeDir="false" afterPath="$PROJECT_DIR$/Tomoscan_pso_interlaced/risultati_timbir_N32_K4_PSO20000.xlsx" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -59,13 +69,13 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "git-widget-placeholder": "main",
-    "settings.editor.selected.configurable": "com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable&quot;
   }
-}]]></component>
+}</component>
   <component name="RecentsManager">
     <key name="MoveFile.RECENT_KEYS">
       <recent name="C:\Users\noemi\Desktop\py\interlaced\Tomoscan_pso_interlaced" />
