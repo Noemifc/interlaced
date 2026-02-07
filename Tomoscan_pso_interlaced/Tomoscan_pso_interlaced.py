@@ -159,12 +159,11 @@ class InterlacedScan:
         # N*K viste per ogni loop (giro)
         for loop_turn in range(K):  # questo è il giro fisico (0..K-1)
             base_turn = 360.0 * loop_turn
+            subloop = self.bit_reverse(loop_turn, bits)      # bit rev del giro 
 
             for i in range(N):
-                for g in range(K):
-                    
-
-                    # indice su griglia fine (0..N*K-1) dentro al giro
+                #for g in range(K):
+                    # indice su   (0..N*K-1) dentro al giro
                     idx = i * K + subloop
                     angle_deg = idx * 360.0 / (N * K)  # in [0,360)
 
