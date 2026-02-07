@@ -162,8 +162,7 @@ class InterlacedScan:
 
             for i in range(N):
                 for g in range(K):
-                    # mantengo la tua logica TIMBIR-like dentro al giro: bit-rev del sotto-loop
-                    subloop = self.bit_reverse(g, bits)
+                    
 
                     # indice su griglia fine (0..N*K-1) dentro al giro
                     idx = i * K + subloop
