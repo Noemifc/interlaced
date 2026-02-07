@@ -45,13 +45,13 @@ class InterlacedScan:
         self.readout = float(readout)
         self.readout_margin = float(readout_margin)
 
-        # Distanza angolare nominale (solo riferimento; alcuni metodi la sovrascrivono)
+        # Distanza angolare nominale 
         if self.num_angles > 1:
             self.rotation_step = (self.rotation_stop - self.rotation_start) / (self.num_angles - 1)
         else:
             self.rotation_step = 0.0
 
-        # placeholder (evita attribute errors se chiami robe fuori ordine)
+        # placeholder 
         self.theta_interlaced = None
         self.theta_interlaced_unwrapped = None
         self.theta_monotonic = None
@@ -312,8 +312,8 @@ class InterlacedScan:
 
         theta_unwrapped_acq = np.concatenate(angles_all).astype(float)
 
-        # self.theta_interlaced = angoli interlacciati in ordine di acquisizione
-        # (qui è già continuo; NON facciamo mod perché perdi informazione sui giri)
+        
+        # qui è già continuo
         self.theta_interlaced = theta_unwrapped_acq.astype(float)
 
         # self.theta_interlaced_unwrapped = angoli interlacciati unwrapped in ordine di acquisizione
