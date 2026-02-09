@@ -5,7 +5,7 @@ import argparse
 
 
 # ============================================================================
-#                     CLASSE INTERLACED SCAN   
+#                     CLASSE INTERLACED SCAN
 # ============================================================================
 class InterlacedScan:
 
@@ -25,10 +25,10 @@ class InterlacedScan:
         readout=0.01,
         readout_margin=1,
         SpeedDegPerSec=60.0,                  # r/w
-        MinStepTarget=0.0,                    # r/w  
+        MinStepTarget=0.0,                    # r/w
     ):
         # ----------------------------
-        # PV-like (r/w)  
+        # PV-like (r/w)
         # ----------------------------
         self.InterlacedRotationStart = float(InterlacedRotationStart)
         self.InterlacedNumberOfRotation = int(InterlacedNumberOfRotation)
@@ -50,12 +50,12 @@ class InterlacedScan:
         self.readout_margin = float(readout_margin)
 
         # ----------------------------
-        # PV calcolati  
+        # PV calcolati
         # ----------------------------
         self.InterlacedRotationStop = None
         self.InterlacedMinStep = None
         self.InterlacedScanTime = None
-        self.InterlacedEfficiency = None  # dict
+        self.InterlacedEfficiency = None
 
         # step nominale - deve dipendere dal calcolo di dtheta
         self.InterlacedRotationStepNominal = None
@@ -81,8 +81,14 @@ class InterlacedScan:
         # initialize derived PVs  per aggiornare i PV quando vengono aggiornati
         self._update_derived_pvs()
 
+
+         
+    
+    
+    # ----------------------------------------------------------------------
     # ----------------------------------------------------------------------
     # Derived PVs (r\w)
+    # ----------------------------------------------------------------------
     # ----------------------------------------------------------------------
     def _update_derived_pvs(self):
         """
@@ -104,18 +110,18 @@ class InterlacedScan:
 
         stop_theta = start_angle + numero_di_rotazioni * 360.0
 
-        # aggiorna il PV  
+        # aggiorna il PV
         self.InterlacedRotationStop = float(stop_theta)
         return self.InterlacedRotationStop
 
     def delta_theta_min(self, metodo=""):
         theta = np.asarray(self.theta_monotonic, dtype=float)
-        if theta.size < 2:                                         # se hai almeno due angoli fai la differenza
+        if theta.size < 2:  # se hai almeno due angoli fai la differenza
             return 0.0
 
         dtheta = np.diff(theta)
 
-        #  ignora eventuali zero  
+        #  ignora eventuali zero
         dtheta = dtheta[dtheta > 0]
 
         if dtheta.size == 0:
@@ -182,8 +188,8 @@ class InterlacedScan:
 
             for i in range(N):
                 idx = i * K + subloop
-                angle_deg = idx * 360.0 / (N * K)       # [0,360)
-                angle_unwrapped = angle_deg + base_turn  # unwrapped fisico
+                angle_deg = idx * 360.0 / (N * K)         # [0,360)
+                angle_unwrapped = angle_deg + base_turn   # unwrapped fisico
                 theta_acq.append(angle_unwrapped)
 
         theta_acq = np.asarray(theta_acq, dtype=float)
@@ -320,12 +326,11 @@ class InterlacedScan:
 
         self._update_interlaced_metrics()
         return angles_all
-                          
 
     # =========================================================
     # FUNZIONI (motion + PSO)
     # =========================================================
-    
+
     def compute_senses(self):
         encoder_dir = 1 if self.PSOCountsPerRotation > 0 else -1
         motor_dir = 1 if self.RotationDirection == 0 else -1
@@ -416,6 +421,8 @@ class InterlacedScan:
     # =========================================================
     # FUNZIONI ADDIZIONALI
     # =========================================================
+
+    # prendo le differenze di angoli consecutive positive  prende in minimo e lo salva in self.InterlacedMinStep
     def _compute_interlaced_min_step(self):
         if self.theta_monotonic is None or len(self.theta_monotonic) < 2:
             self.InterlacedMinStep = np.nan
@@ -427,6 +434,7 @@ class InterlacedScan:
         self.InterlacedMinStep = float(np.min(d)) if d.size else np.nan
         return self.InterlacedMinStep
 
+    # tempo totale della scansione interlacciata lo salva in self.InterlacedScanTime
     def _compute_interlaced_scan_time(self):
         total_deg = float(self.InterlacedNumberOfRotation) * 360.0
         speed = float(self.SpeedDegPerSec)
@@ -436,33 +444,48 @@ class InterlacedScan:
             self.InterlacedScanTime = float(total_deg / speed + 2.0 * max(0.0, self.RotationAccelTime))
         return self.InterlacedScanTime
 
+    # efficienza relativa a delta_theta_min
+
     def _compute_interlaced_efficiency(self):
-        step = float(self.MinStepTarget)
-        if self.theta_monotonic is None or step <= 0:
-            self.InterlacedEfficiency = None
-            return None
+    if self.theta_monotonic is None:
+        self.InterlacedEfficiency = None
+        return None
 
-        total_deg = float(self.InterlacedNumberOfRotation) * 360.0
-        required_views = int(np.ceil(total_deg / step))
+    theta = np.asarray(self.theta_monotonic, dtype=float)
+    if theta.size == 0:
+        self.InterlacedEfficiency = None
+        return None
 
-        theta = np.asarray(self.theta_monotonic, dtype=float)
-        theta_rel = theta - float(theta[0])
-        theta_rel = theta_rel[(theta_rel >= 0) & (theta_rel < total_deg)]
+    # metto a zero per evitare offset assoluti
+    theta_rel = theta - float(theta[0])
 
-        bins = np.floor(theta_rel / step).astype(np.int64)
-        bins = bins[(bins >= 0) & (bins < required_views)]
-        covered = np.unique(bins).size
+    # passo minimo dal tuo metodo UI
+    dmin = float(self.delta_theta_min())
+    if dmin <= 0:
+        self.InterlacedEfficiency = None
+        return None
 
-        missing = required_views - covered
-        eff = covered / required_views if required_views > 0 else np.nan
+    # assegna ogni angolo allo "slot" più vicino della griglia a passo dmin
+    # k = round(theta/dmin)
+    slots = np.rint(theta_rel / dmin).astype(np.int64)
 
-        self.InterlacedEfficiency = dict(
-            required_views=int(required_views),
-            collected_bins=int(covered),
-            missing_views=int(missing),
-            efficiency=float(eff),
-        )
-        return self.InterlacedEfficiency
+    total_views = int(theta_rel.size)
+    unique_slots = int(np.unique(slots).size)
+
+    lost_views = total_views - unique_slots
+    eff = 100.0 * unique_slots / total_views if total_views > 0 else np.nan
+    lost_pct = 100.0 * lost_views / total_views if total_views > 0 else np.nan
+
+    self.InterlacedEfficiency = dict(
+        delta_theta_min_deg=float(dmin),
+        total_views=int(total_views),
+        unique_slots=int(unique_slots),
+        lost_views=int(lost_views),            # viste perse per collisione
+        efficiency_percent=float(eff),         # 100% = nessuna collisione
+        lost_percent=float(lost_pct),
+    )
+    return self.InterlacedEfficiency
+
 
     def _update_interlaced_metrics(self):
         # sempre coerente con i PV r/w
@@ -475,6 +498,7 @@ class InterlacedScan:
             self._compute_interlaced_efficiency()
         else:
             self.InterlacedEfficiency = None
+
 
 
 # ============================================================================
