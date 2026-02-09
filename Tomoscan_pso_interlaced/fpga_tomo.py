@@ -8,7 +8,6 @@ import argparse
 #                     CLASSE INTERLACED SCAN
 # ============================================================================
 class InterlacedScan:
-
     # ----------------------------------------------------------------------
     # init e parametri
     # ----------------------------------------------------------------------
@@ -21,11 +20,11 @@ class InterlacedScan:
         PSOPulsePerRotation=11840158,
         RotationDirection=0,
         RotationAccelTime=0.15,
-        exposure=0.01,
+        ExposureTime=0.01,                   # r/w (PV TomoScan)
         readout=0.01,
         readout_margin=1,
-        SpeedDegPerSec=60.0,                  # r/w
-        MinStepTarget=0.0,                    # r/w
+        SpeedDegPerSec=60.0,                 # r/w
+        MinStepTarget=0.0,                   # r/w
     ):
         # ----------------------------
         # PV-like (r/w)
@@ -34,7 +33,6 @@ class InterlacedScan:
         self.InterlacedNumberOfRotation = int(InterlacedNumberOfRotation)
         self.InterlacedNumAnglesPerRotation = int(InterlacedNumAnglesPerRotation)
         self.SpeedDegPerSec = float(SpeedDegPerSec)
-
         self.MinStepTarget = float(MinStepTarget)
 
         # ----------------------------
@@ -45,7 +43,9 @@ class InterlacedScan:
         self.RotationDirection = int(RotationDirection)
         self.RotationAccelTime = float(RotationAccelTime)
 
-        self.exposure = float(exposure)
+        # TomoScan PV: ExposureTime (copiato sulla camera AcquireTime nel sistema reale)
+        self.ExposureTime = float(ExposureTime)
+
         self.readout = float(readout)
         self.readout_margin = float(readout_margin)
 
@@ -78,57 +78,56 @@ class InterlacedScan:
         self.PSOCountsTaxiCorrected = None
         self.PSOCountsFinal = None
 
-        # initialize derived PVs  per aggiornare i PV quando vengono aggiornati
+        # altri placeholder usati in compute_positions_PSO
+        self.PSOStartTaxi = None
+        self.rotation_stop_new = None
+        self.PSOEndTaxi = None
+        self.theta_classic = None
+        self.motor_speed = None
+
+        # initialize derived PVs
         self._update_derived_pvs()
 
-
-         
-    
-    
     # ----------------------------------------------------------------------
-    # ----------------------------------------------------------------------
-    # Derived PVs (r\w)
-    # ----------------------------------------------------------------------
+    # Derived PVs (r/w)
     # ----------------------------------------------------------------------
     def _update_derived_pvs(self):
         """
-        Aggiorna i PV derivati :
-          1) InterlacedRotationStop = ultimo angolo effettivamente acquisito (theta_monotonic[-1]) oppure start_angle + numero di rotazioni * 360
-          2) InterlacedRotationStepNominal = delta_theta_min() minimo dei delta theta tra angoli monotoni
+        Aggiorna i PV derivati:
+          - InterlacedRotationStop: stop teorico = start + K*360
+          - InterlacedRotationStepNominal: delta_theta_min() sugli angoli monotoni (se disponibili)
         """
-        # 1) STOP = ultimo angolo monotono
+        # stop teorico sempre definibile
+        self.stop_angle()
 
-        # 2) STEP nominale = minimo delta_theta
+        # step nominale: se non hai theta_monotonic ancora, delta_theta_min torna 0
         self.InterlacedRotationStepNominal = float(self.delta_theta_min())
 
     def stop_angle(self, metodo=""):
         """
-        stop_theta = start stop_theta = start_angle + numero di rotazioni * 360
+        stop_theta = start_angle + numero di rotazioni * 360
         """
         start_angle = float(self.InterlacedRotationStart)
         numero_di_rotazioni = int(self.InterlacedNumberOfRotation)
-
         stop_theta = start_angle + numero_di_rotazioni * 360.0
-
-        # aggiorna il PV
         self.InterlacedRotationStop = float(stop_theta)
         return self.InterlacedRotationStop
 
     def delta_theta_min(self, metodo=""):
+        if self.theta_monotonic is None:
+            return 0.0
+
         theta = np.asarray(self.theta_monotonic, dtype=float)
-        if theta.size < 2:  # se hai almeno due angoli fai la differenza
+        if theta.size < 2:
             return 0.0
 
         dtheta = np.diff(theta)
-
-        #  ignora eventuali zero
         dtheta = dtheta[dtheta > 0]
 
         if dtheta.size == 0:
             return 0.0
 
-        delta_theta_min = float(np.min(dtheta))
-        return delta_theta_min
+        return float(np.min(dtheta))
 
     # ----------------------------------------------------------------------
     # utility
@@ -143,12 +142,7 @@ class InterlacedScan:
     # =========================================================
     # MODE
     # =========================================================
-    """"self._update_interlaced_metrics()  aggiorna tutti i PVS, InterlacedMinStep
-        InterlacedScanTime, InterlacedEfficiency
-     """
-
     def generate_interlaced_timbir(self):
-        self._update_derived_pvs()
         self._ensure_power_of_two_K()
 
         N = int(self.InterlacedNumAnglesPerRotation)
@@ -174,7 +168,6 @@ class InterlacedScan:
         self._update_interlaced_metrics()
 
     def generate_interlaced_multitimbir(self):
-        self._update_derived_pvs()
         self._ensure_power_of_two_K()
 
         N = int(self.InterlacedNumAnglesPerRotation)
@@ -201,8 +194,6 @@ class InterlacedScan:
         self._update_interlaced_metrics()
 
     def generate_interlaced_goldenangle(self):
-        self._update_derived_pvs()
-
         N = int(self.InterlacedNumAnglesPerRotation)
         K = int(self.InterlacedNumberOfRotation)
         start = float(self.InterlacedRotationStart)
@@ -229,12 +220,10 @@ class InterlacedScan:
         return angles_all
 
     def generate_interlaced_kturns(self, delta_theta=None):
-        self._update_derived_pvs()
-
         N = int(self.InterlacedNumAnglesPerRotation)
         K = int(self.InterlacedNumberOfRotation)
         start = float(self.InterlacedRotationStart)
-        stop = float(self.InterlacedRotationStop)
+        stop = float(self.InterlacedRotationStop) if self.InterlacedRotationStop is not None else self.stop_angle()
 
         if delta_theta is None:
             delta_theta = (stop - start) / (N - 1) if N > 1 else 0.0
@@ -254,12 +243,10 @@ class InterlacedScan:
         return angles_all
 
     def generate_interlaced_multiturns(self, delta_theta=None):
-        self._update_derived_pvs()
-
         N = int(self.InterlacedNumAnglesPerRotation)
         K = int(self.InterlacedNumberOfRotation)
         start = float(self.InterlacedRotationStart)
-        stop = float(self.InterlacedRotationStop)
+        stop = float(self.InterlacedRotationStop) if self.InterlacedRotationStop is not None else self.stop_angle()
 
         if delta_theta is None:
             delta_theta = (stop - start) / (N - 1) if N > 1 else 0.0
@@ -281,12 +268,10 @@ class InterlacedScan:
         return angles_all
 
     def generate_interlaced_corput(self, delta_theta=None):
-        self._update_derived_pvs()
-
         N = int(self.InterlacedNumAnglesPerRotation)
         K = int(self.InterlacedNumberOfRotation)
         start = float(self.InterlacedRotationStart)
-        stop = float(self.InterlacedRotationStop)
+        stop = float(self.InterlacedRotationStop) if self.InterlacedRotationStop is not None else self.stop_angle()
 
         if delta_theta is None:
             delta_theta = (stop - start) / (N - 1) if N > 1 else 0.0
@@ -330,7 +315,6 @@ class InterlacedScan:
     # =========================================================
     # FUNZIONI (motion + PSO)
     # =========================================================
-
     def compute_senses(self):
         encoder_dir = 1 if self.PSOCountsPerRotation > 0 else -1
         motor_dir = 1 if self.RotationDirection == 0 else -1
@@ -338,21 +322,26 @@ class InterlacedScan:
         return encoder_dir * motor_dir * user_dir, user_dir
 
     def compute_frame_time(self):
-        return float(self.exposure + self.readout)
+        # ExposureTime è il PV TomoScan
+        return float(self.ExposureTime + self.readout)
 
     def compute_positions_PSO(self):
+        # serve che lo stop sia definito
+        if self.InterlacedRotationStop is None:
+            self.stop_angle()
+
         overall_sense, user_direction = self.compute_senses()
         encoder_multiply = self.PSOCountsPerRotation / 360.0
 
-        rotation_step = float(self.InterlacedRotationStepNominal)
+        rotation_step = float(self.InterlacedRotationStepNominal) if self.InterlacedRotationStepNominal is not None else 0.0
         raw_counts = rotation_step * encoder_multiply
-        delta_counts = round(raw_counts)
-        rotation_step = delta_counts / encoder_multiply
+        delta_counts = round(raw_counts) if encoder_multiply != 0 else 0
+        rotation_step = (delta_counts / encoder_multiply) if encoder_multiply != 0 else rotation_step
 
         self.InterlacedRotationStepNominal = rotation_step
 
         dt = self.compute_frame_time()
-        self.motor_speed = abs(rotation_step) / dt
+        self.motor_speed = abs(rotation_step) / dt if dt > 0 else 0.0
 
         accel_dist = 0.5 * self.motor_speed * self.RotationAccelTime
 
@@ -361,7 +350,7 @@ class InterlacedScan:
         else:
             rotation_start_new = float(self.InterlacedRotationStart) - (2 - self.readout_margin) * rotation_step
 
-        taxi_steps = math.ceil((accel_dist / abs(rotation_step)) + 0.5)
+        taxi_steps = math.ceil((accel_dist / abs(rotation_step)) + 0.5) if abs(rotation_step) > 0 else 0
         taxi_dist = taxi_steps * abs(rotation_step)
 
         self.PSOStartTaxi = rotation_start_new - taxi_dist * user_direction
@@ -373,7 +362,13 @@ class InterlacedScan:
         ) * rotation_step
 
     def simulate_taxi_motion(self, omega_target=10, dt=1e-4):
+        if self.theta_monotonic is None:
+            raise ValueError("theta_monotonic non definito: chiama prima un generate_interlaced_*().")
+
         theta_max = float(np.max(np.asarray(self.theta_monotonic, dtype=float)))
+
+        if self.RotationAccelTime <= 0:
+            raise ValueError("RotationAccelTime deve essere > 0")
 
         accel = decel = float(omega_target) / float(self.RotationAccelTime)
 
@@ -383,7 +378,7 @@ class InterlacedScan:
 
         theta_flat_len = theta_max - 2 * theta_acc_end
         if theta_flat_len < 0:
-            raise ValueError("Profilo di moto non realizzabile (theta_max troppo piccolo rispetto accel/decel)")
+            raise ValueError("Profilo di moto non realizzabile (theta_max troppo piccolo vs accel/decel)")
 
         t_flat = np.arange(0, theta_flat_len / omega_target, dt) if omega_target > 0 else np.array([0.0])
         theta_flat = theta_acc_end + omega_target * t_flat
@@ -400,6 +395,9 @@ class InterlacedScan:
         ]).astype(float)
 
     def compute_real_motion(self):
+        if self.theta_vec is None or self.t_vec is None:
+            raise ValueError("Profilo moto non definito: chiama simulate_taxi_motion() prima.")
+
         theta_target = np.asarray(self.theta_monotonic, dtype=float)
         self.t_real = np.interp(theta_target, self.theta_vec, self.t_vec).astype(float)
         self.theta_real = np.interp(self.t_real, self.t_vec, self.theta_vec).astype(float)
@@ -413,16 +411,22 @@ class InterlacedScan:
         if np.any(np.diff(self.PSOCountsIdeal) <= 0):
             print("WARNING: counts non strettamente crescenti (duplicati/inversioni).")
 
+        if self.theta_real is None:
+            raise ValueError("theta_real non definito: chiama compute_real_motion() prima.")
+
         self.PSOCountsTaxiCorrected = np.round(
             np.asarray(self.theta_real, dtype=float) * pulses_per_degree
         ).astype(int)
         self.PSOCountsFinal = self.PSOCountsTaxiCorrected.copy()
 
     # =========================================================
-    # FUNZIONI ADDIZIONALI
+    # FUNZIONI ADDIZIONALI (metriche)
     # =========================================================
 
-    # prendo le differenze di angoli consecutive positive  prende in minimo e lo salva in self.InterlacedMinStep
+
+
+
+    
     def _compute_interlaced_min_step(self):
         if self.theta_monotonic is None or len(self.theta_monotonic) < 2:
             self.InterlacedMinStep = np.nan
@@ -430,75 +434,135 @@ class InterlacedScan:
 
         theta = np.asarray(self.theta_monotonic, dtype=float)
         d = np.diff(theta)
-        d = d[d > 0]
+        d = d[d > 0]                                                               # Tiene solo le differenze positive
         self.InterlacedMinStep = float(np.min(d)) if d.size else np.nan
         return self.InterlacedMinStep
 
-    # tempo totale della scansione interlacciata lo salva in self.InterlacedScanTime
+    # quanto tempo ci mette la rotazione durante una scansione interlacciata: del tempo della rotazione, non del tempo totale dell’acquisizione
+
     def _compute_interlaced_scan_time(self):
         total_deg = float(self.InterlacedNumberOfRotation) * 360.0
         speed = float(self.SpeedDegPerSec)
+
         if speed <= 0:
             self.InterlacedScanTime = np.nan
         else:
+            # tempo rotazione + accel/decel (stima semplice)
             self.InterlacedScanTime = float(total_deg / speed + 2.0 * max(0.0, self.RotationAccelTime))
         return self.InterlacedScanTime
 
-    # efficienza relativa a delta_theta_min
+    # stima del tempo totale dell’acquisizione in fly-scan: tempo necessario a ruotare l’intero angolo richiesto
+
+    def _compute_interlaced_total_acq_time(self):
+    """
+    Stima del tempo totale di acquisizione per fly-scan:
+    - tempo rotazione a velocità effettiva (limitata dalla camera) + accel/decel
+    - la velocità effettiva è min(velocità impostata, velocità massima sostenibile dalla camera)
+    """
+
+    # gradi totali da percorrere K·360°
+    total_deg = float(self.InterlacedNumberOfRotation) * 360.0
+
+    # velocità  impostata dal PV 
+    v_cmd = float(self.SpeedDegPerSec)
+    # velocita' deve essere =! 0 e positiva  ho agginto altro nuovo PV:  InterlacedTotalAcqTime
+    if v_cmd <= 0 or total_deg <= 0:
+        self.InterlacedTotalAcqTime = np.nan
+        return self.InterlacedTotalAcqTime
+
+    # vincolo camera: periodo frame minimo per singola vista 
+    #   frame_period =  exposure + readout * margin = tempo minimo che la camera impiega per produrre un frame utile
+    frame_period = float(self.exposure) + float(self.readout) * float(self.readout_margin)
+
+    # se per qualche motivo è <= 0 uso la velocita' impostata dal PV , stima meccanica 
+    if frame_period <= 0:
+        v_eff = v_cmd
+    else:
+        # passo angolare richiesto per frame: quanto ruoto per ogni frame
+        step = float(getattr(self, "InterlacedMinStep", np.nan))         # quanti gradi tra una vista e la successiva
+        if not np.isfinite(step) or step <= 0:                           # restituisce un valore finito e InterlacedMinStep non è valido ->
+          
+            # fallback ragionevole: passo nominale (360/N) per rotazione
+            N = float(self.InterlacedNumAnglesPerRotation)
+            step = 360.0 / N if N > 0 else np.nan
+
+        if not np.isfinite(step) or step <= 0:                            # senza un passo angolare non posso collegare camera e rotazione
+            self.InterlacedTotalAcqTime = np.nan
+            return self.InterlacedTotalAcqTime
+
+        # velocità max sostenibile dalla camera senza saltare frame
+        v_cam_max = step / frame_period
+
+        # velocità effettiva
+        v_eff = min(v_cmd, v_cam_max)
+
+    # ---- 3) tempo rotazione + accel/decel ----
+    accel = 2.0 * max(0.0, float(self.RotationAccelTime))
+    self.InterlacedTotalAcqTime = float(total_deg / v_eff + accel)
+    return self.InterlacedTotalAcqTime
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    
 
     def _compute_interlaced_efficiency(self):
-    if self.theta_monotonic is None:
-        self.InterlacedEfficiency = None
-        return None
+        if self.theta_monotonic is None:
+            self.InterlacedEfficiency = None
+            return None
 
-    theta = np.asarray(self.theta_monotonic, dtype=float)
-    if theta.size == 0:
-        self.InterlacedEfficiency = None
-        return None
+        theta = np.asarray(self.theta_monotonic, dtype=float)
+        if theta.size == 0:
+            self.InterlacedEfficiency = None
+            return None
 
-    # metto a zero per evitare offset assoluti
-    theta_rel = theta - float(theta[0])
+        theta_rel = theta - float(theta[0])
 
-    # passo minimo dal tuo metodo UI
-    dmin = float(self.delta_theta_min())
-    if dmin <= 0:
-        self.InterlacedEfficiency = None
-        return None
+        dmin = float(self.delta_theta_min())
+        if dmin <= 0:
+            self.InterlacedEfficiency = None
+            return None
 
-    # assegna ogni angolo allo "slot" più vicino della griglia a passo dmin
-    # k = round(theta/dmin)
-    slots = np.rint(theta_rel / dmin).astype(np.int64)
+        slots = np.rint(theta_rel / dmin).astype(np.int64)
 
-    total_views = int(theta_rel.size)
-    unique_slots = int(np.unique(slots).size)
+        total_views = int(theta_rel.size)
+        unique_slots = int(np.unique(slots).size)
 
-    lost_views = total_views - unique_slots
-    eff = 100.0 * unique_slots / total_views if total_views > 0 else np.nan
-    lost_pct = 100.0 * lost_views / total_views if total_views > 0 else np.nan
+        lost_views = total_views - unique_slots
+        eff = 100.0 * unique_slots / total_views if total_views > 0 else np.nan
+        lost_pct = 100.0 * lost_views / total_views if total_views > 0 else np.nan
 
-    self.InterlacedEfficiency = dict(
-        delta_theta_min_deg=float(dmin),
-        total_views=int(total_views),
-        unique_slots=int(unique_slots),
-        lost_views=int(lost_views),            # viste perse per collisione
-        efficiency_percent=float(eff),         # 100% = nessuna collisione
-        lost_percent=float(lost_pct),
-    )
-    return self.InterlacedEfficiency
-
+        self.InterlacedEfficiency = dict(
+            delta_theta_min_deg=float(dmin),
+            total_views=int(total_views),
+            unique_slots=int(unique_slots),
+            lost_views=int(lost_views),
+            efficiency_percent=float(eff),
+            lost_percent=float(lost_pct),
+        )
+        return self.InterlacedEfficiency
 
     def _update_interlaced_metrics(self):
-        # sempre coerente con i PV r/w
         self._update_derived_pvs()
-
-        # metriche
         self._compute_interlaced_min_step()
         self._compute_interlaced_scan_time()
         if self.MinStepTarget > 0:
             self._compute_interlaced_efficiency()
         else:
             self.InterlacedEfficiency = None
-
 
 
 # ============================================================================
@@ -515,9 +579,12 @@ def main():
 
     # PV-like
     parser.add_argument("--speed", type=float, default=90.0)
-    parser.add_argument("--indexmax", type=int, default=550000)  # NON USATO
     parser.add_argument("--min_step_target", type=float, default=0.0)
     parser.add_argument("--start", type=float, default=0.0)
+
+    # TomoScan PV
+    parser.add_argument("--ExposureTime", type=float, default=0.01)
+    parser.add_argument("--readout", type=float, default=0.01)
 
     args = parser.parse_args()
 
@@ -527,7 +594,9 @@ def main():
         InterlacedNumAnglesPerRotation=args.num_angles,
         PSOCountsPerRotation=args.PSOCountsPerRotation,
         SpeedDegPerSec=args.speed,
-        MinStepTarget=args.min_step_target
+        MinStepTarget=args.min_step_target,
+        ExposureTime=args.ExposureTime,
+        readout=args.readout,
     )
 
     if args.mode == "timbir":
@@ -557,6 +626,9 @@ def main():
     scan.simulate_taxi_motion()
     scan.compute_real_motion()
     scan.convert_angles_to_counts()
+
+    print("PSOCountsIdeal (first 10):", scan.PSOCountsIdeal[:10] if scan.PSOCountsIdeal is not None else None)
+    print("PSOCountsFinal (first 10):", scan.PSOCountsFinal[:10] if scan.PSOCountsFinal is not None else None)
 
 
 if __name__ == "__main__":
