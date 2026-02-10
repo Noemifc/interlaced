@@ -20,7 +20,7 @@ class InterlacedScan:
         PSOPulsePerRotation=358818,           # quanti tick vede il contatore trigger *360
         RotationDirection=0,
         RotationAccelTime=0.15,
-        ExposureTime=0.01,                   # r/w  
+        ExposureTime=0.01,                   # r/w
         readout=0.01,
         readout_margin=1,
         SpeedDegPerSec=60.0,                 # r/w
@@ -43,7 +43,7 @@ class InterlacedScan:
         self.RotationDirection = int(RotationDirection)
         self.RotationAccelTime = float(RotationAccelTime)
 
-        # TomoScan PV: ExposureTime 
+        # TomoScan PV: ExposureTime
         self.ExposureTime = float(ExposureTime)
 
         self.readout = float(readout)
@@ -333,7 +333,11 @@ class InterlacedScan:
         overall_sense, user_direction = self.compute_senses()
         encoder_multiply = self.PSOCountsPerRotation / 360.0
 
-        rotation_step = float(self.InterlacedRotationStepNominal) if self.InterlacedRotationStepNominal is not None else 0.0
+        rotation_step = (
+            float(self.InterlacedRotationStepNominal)
+            if self.InterlacedRotationStepNominal is not None
+            else 0.0
+        )
         raw_counts = rotation_step * encoder_multiply
         delta_counts = round(raw_counts) if encoder_multiply != 0 else 0
         rotation_step = (delta_counts / encoder_multiply) if encoder_multiply != 0 else rotation_step
@@ -350,7 +354,11 @@ class InterlacedScan:
         else:
             rotation_start_new = float(self.InterlacedRotationStart) - (2 - self.readout_margin) * rotation_step
 
-        taxi_steps = math.ceil((accel_dist / abs(rotation_step)) + 0.5) if abs(rotation_step) > 0 else 0
+        taxi_steps = (
+            math.ceil((accel_dist / abs(rotation_step)) + 0.5)
+            if abs(rotation_step) > 0
+            else 0
+        )
         taxi_dist = taxi_steps * abs(rotation_step)
 
         self.PSOStartTaxi = rotation_start_new - taxi_dist * user_direction
@@ -391,7 +399,9 @@ class InterlacedScan:
         self.t_vec = np.concatenate([
             t_acc,
             (t_acc[-1] if len(t_acc) > 0 else 0.0) + t_flat,
-            (t_acc[-1] if len(t_acc) > 0 else 0.0) + (t_flat[-1] if len(t_flat) > 0 else 0.0) + t_dec
+            (t_acc[-1] if len(t_acc) > 0 else 0.0)
+            + (t_flat[-1] if len(t_flat) > 0 else 0.0)
+            + t_dec
         ]).astype(float)
 
     def compute_real_motion(self):
@@ -417,11 +427,11 @@ class InterlacedScan:
         self.PSOCountsTaxiCorrected = np.round(
             np.asarray(self.theta_real, dtype=float) * pulses_per_degree
         ).astype(int)
-        self.PSOCountsFinal = self.PSOCountsTaxiCorrected.copy()
+
         # Counts finali (quelli che userai davvero)
         self.PSOCountsFinal = self.PSOCountsTaxiCorrected.copy()
 
-        # Stringa dei pulses corretti angoli  taxi-corrected
+        # Stringa dei pulses corretti angoli taxi-corrected
         self.theta_monotonic_pulses_list = self.PSOCountsFinal.tolist()
         self.theta_monotonic_pulses = sep.join(map(str, self.theta_monotonic_pulses_list))
 
@@ -437,11 +447,12 @@ class InterlacedScan:
 
         theta = np.asarray(self.theta_monotonic, dtype=float)
         d = np.diff(theta)
-        d = d[d > 0]                                                               # Tiene solo le differenze positive
+        d = d[d > 0]  # Tiene solo le differenze positive
         self.InterlacedMinStep = float(np.min(d)) if d.size else np.nan
         return self.InterlacedMinStep
 
-    # quanto tempo ci mette la rotazione durante una scansione interlacciata: del tempo della rotazione non del tempo totale dell’acquisizione
+    # quanto tempo ci mette la rotazione durante una scansione interlacciata:
+    # del tempo della rotazione non del tempo totale dell’acquisizione
     def _compute_interlaced_scan_time(self):
         total_deg = float(self.InterlacedNumberOfRotation) * 360.0
         speed = float(self.SpeedDegPerSec)
@@ -453,7 +464,8 @@ class InterlacedScan:
             self.InterlacedScanTime = float(total_deg / speed + 2.0 * max(0.0, self.RotationAccelTime))
         return self.InterlacedScanTime
 
-    # stima del tempo totale dell’acquisizione in fly-scan: tempo necessario a ruotare l’intero angolo richiesto
+    # stima del tempo totale dell’acquisizione in fly-scan:
+    # tempo necessario a ruotare l’intero angolo richiesto
     def _compute_interlaced_total_acq_time(self):
         """
         tempo rotazione a velocità effettiva (limitata dalla camera) + accel/decel
@@ -462,7 +474,7 @@ class InterlacedScan:
         # gradi totali da percorrere K·360°
         total_deg = float(self.InterlacedNumberOfRotation) * 360.0
 
-        # velocità  impostata dal PV
+        # velocità impostata dal PV
         v_cmd = float(self.SpeedDegPerSec)
         # velocita' deve essere =! 0 e positiva  ho agginto altro nuovo PV:  InterlacedTotalAcqTime
         if v_cmd <= 0 or total_deg <= 0:
@@ -470,7 +482,7 @@ class InterlacedScan:
             return self.InterlacedTotalAcqTime
 
         # vincolo camera: periodo frame minimo per singola vista
-        #   frame_period =  exposure + readout * margin = tempo minimo che la camera impiega per produrre un frame utile
+        #   frame_period = exposure + readout * margin
         frame_period = float(self.exposure) + float(self.readout) * float(self.readout_margin)
 
         # se per qualche motivo è <= 0 uso la velocita' impostata dal PV , stima meccanica
@@ -478,14 +490,13 @@ class InterlacedScan:
             v_eff = v_cmd
         else:
             # passo angolare richiesto per frame: quanto ruoto per ogni frame
-            step = float(getattr(self, "InterlacedMinStep", np.nan))         # quanti gradi tra una vista e la successiva
-            if not np.isfinite(step) or step <= 0:                           # restituisce un valore finito e InterlacedMinStep non è valido ->
-
+            step = float(getattr(self, "InterlacedMinStep", np.nan))  # quanti gradi tra una vista e la successiva
+            if not np.isfinite(step) or step <= 0:
                 # fallback ragionevole: passo nominale (360/N) per rotazione
                 N = float(self.InterlacedNumAnglesPerRotation)
                 step = 360.0 / N if N > 0 else np.nan
 
-            if not np.isfinite(step) or step <= 0:                            # senza un passo angolare non posso collegare camera e rotazione
+            if not np.isfinite(step) or step <= 0:
                 self.InterlacedTotalAcqTime = np.nan
                 return self.InterlacedTotalAcqTime
 
@@ -557,39 +568,38 @@ class InterlacedScan:
 
         # genero indici di trigger nel treno di impulsi dell’encoder
 
-   
 
 def theta_monotonic_pulses_to_trigger_positions(self, n_rotations, pulses_per_rotation, sep=" "):
     """
-     metodo interlaced decide quali angoli-> impulsi da prendere -> convento in index assoluti 
-    PSO in rotazione continua , quindi indici in ordine temporale 0-based e crescenti
-  
-    Usa direttamente theta_monotonic_pulses e produce positions  su N rotazioni con contatore assoluto
+    metodo interlaced decide quali angoli-> impulsi da prendere -> convento in index assoluti
+    PSO in rotazione continua, quindi indici in ordine temporale 0-based e crescenti
 
+    Usa direttamente theta_monotonic_pulses e produce positions su N rotazioni con contatore assoluto
     """
     P = int(self.PSOPulsePerRotation)           # quanti tick vede il contatore per 360
-    N = int(self.InterlacedNumberOfRotation)    # quante rotazioni fisiche sono ho posto k loops valuta se concettualmente corretto 
+    N = int(self.InterlacedNumberOfRotation)    # quante rotazioni fisiche sono ho posto k loops valuta se concettualmente corretto
     if P <= 0 or N <= 0:
         raise ValueError("pulses_per_rotation e n_rotations devono essere > 0")
 
-    max_idx = N * P - 1     # per N giri con  P tick/giro -> indice max N·P−1
+    max_idx = N * P - 1     # per N giri con P tick/giro -> indice max N·P−1
 
-  
     if not hasattr(self, "theta_monotonic_pulses") or self.theta_monotonic_pulses is None:
         raise ValueError("theta_monotonic_pulses non definito")
 
-    s = str(self.theta_monotonic_pulses) 
+    s = str(self.theta_monotonic_pulses)
     pulses = np.asarray([int(x) for x in s.split() if x.strip()], dtype=np.int64)
 
-    # contatore assoluto 
+    # contatore assoluto
     pulses = np.clip(pulses, 0, max_idx)
 
-    #  increasing e senza duplicati
+    # increasing e senza duplicati
     positions = np.unique(np.sort(pulses)).astype(np.int64)
 
     self.trigger_positions = positions.tolist()
     self.trigger_positions_str = sep.join(map(str, self.trigger_positions))
     return self.trigger_positions
+
+
 # ============================================================================
 def main():
     parser = argparse.ArgumentParser(description="Run interlaced scan simulation (PV-only names).")
