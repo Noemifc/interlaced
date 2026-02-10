@@ -148,6 +148,7 @@ class InterlacedScan:
         K = int(self.InterlacedNumberOfRotation)
         assert (K & (K - 1)) == 0, "InterlacedNumberOfRotation (K) deve essere potenza di 2"
 
+        
     # =========================================================
     # MODE
     # =========================================================
@@ -681,8 +682,25 @@ def main():
     scan.compute_real_motion()
     scan.convert_angles_to_counts()
 
-    print("PSOCountsIdeal (first 10):", scan.PSOCountsIdeal[:10] if scan.PSOCountsIdeal is not None else None)
-    print("PSOCountsFinal (first 10):", scan.PSOCountsFinal[:10] if scan.PSOCountsFinal is not None else None)
+    # genera trigger_positions (dai pulses già calcolati)
+    scan.theta_monotonic_pulses_to_trigger_positions(
+        n_rotations=scan.InterlacedNumberOfRotation,
+        pulses_per_rotation=scan.PSOPulsePerRotation
+    )
+
+    print(
+        "trigger_positions (first 10):",
+        scan.trigger_positions[:10] if hasattr(scan, "trigger_positions") else None
+    )
+
+    print(
+        "PSOCountsIdeal (first 10):",
+        scan.PSOCountsIdeal[:10] if scan.PSOCountsIdeal is not None else None
+    )
+    print(
+        "PSOCountsFinal (first 10):",
+        scan.PSOCountsFinal[:10] if scan.PSOCountsFinal is not None else None
+    )
 
 
 if __name__ == "__main__":
