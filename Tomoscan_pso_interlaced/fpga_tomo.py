@@ -1,4 +1,3 @@
-```python
 #!/usr/bin/env python3
 import numpy as np
 import math
@@ -589,36 +588,35 @@ class InterlacedScan:
 
         # genero indici di trigger nel treno di impulsi dell’encoder
 
+    def theta_monotonic_pulses_to_trigger_positions(self, n_rotations, pulses_per_rotation, sep=" "):
+        """
+        metodo interlaced decide quali angoli-> impulsi da prendere -> convento in index assoluti
+        PSO in rotazione continua, quindi indici in ordine temporale 0-based e crescenti
 
-def theta_monotonic_pulses_to_trigger_positions(self, n_rotations, pulses_per_rotation, sep=" "):
-    """
-    metodo interlaced decide quali angoli-> impulsi da prendere -> convento in index assoluti
-    PSO in rotazione continua, quindi indici in ordine temporale 0-based e crescenti
+        Usa direttamente theta_monotonic_pulses e produce positions su N rotazioni con contatore assoluto
+        """
+        P = int(self.PSOPulsePerRotation)           # quanti tick vede il contatore per 360
+        N = int(self.InterlacedNumberOfRotation)    # quante rotazioni fisiche sono ho posto k loops valuta se concettualmente corretto
+        if P <= 0 or N <= 0:
+            raise ValueError("pulses_per_rotation e n_rotations devono essere > 0")
 
-    Usa direttamente theta_monotonic_pulses e produce positions su N rotazioni con contatore assoluto
-    """
-    P = int(self.PSOPulsePerRotation)           # quanti tick vede il contatore per 360
-    N = int(self.InterlacedNumberOfRotation)    # quante rotazioni fisiche sono ho posto k loops valuta se concettualmente corretto
-    if P <= 0 or N <= 0:
-        raise ValueError("pulses_per_rotation e n_rotations devono essere > 0")
+        max_idx = N * P - 1     # per N giri con P tick/giro -> indice max N·P−1
 
-    max_idx = N * P - 1     # per N giri con P tick/giro -> indice max N·P−1
+        if not hasattr(self, "theta_monotonic_pulses") or self.theta_monotonic_pulses is None:
+            raise ValueError("theta_monotonic_pulses non definito")
 
-    if not hasattr(self, "theta_monotonic_pulses") or self.theta_monotonic_pulses is None:
-        raise ValueError("theta_monotonic_pulses non definito")
+        s = str(self.theta_monotonic_pulses)
+        pulses = np.asarray([int(x) for x in s.split() if x.strip()], dtype=np.int64)
 
-    s = str(self.theta_monotonic_pulses)
-    pulses = np.asarray([int(x) for x in s.split() if x.strip()], dtype=np.int64)
+        # contatore assoluto
+        pulses = np.clip(pulses, 0, max_idx)
 
-    # contatore assoluto
-    pulses = np.clip(pulses, 0, max_idx)
+        # increasing e senza duplicati
+        positions = np.unique(np.sort(pulses)).astype(np.int64)
 
-    # increasing e senza duplicati
-    positions = np.unique(np.sort(pulses)).astype(np.int64)
-
-    self.trigger_positions = positions.tolist()
-    self.trigger_positions_str = sep.join(map(str, self.trigger_positions))
-    return self.trigger_positions
+        self.trigger_positions = positions.tolist()
+        self.trigger_positions_str = sep.join(map(str, self.trigger_positions))
+        return self.trigger_positions
 
 
 # ============================================================================
@@ -689,4 +687,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-```
