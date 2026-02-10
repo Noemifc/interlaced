@@ -104,7 +104,7 @@ class InterlacedScan:
         # step nominale: se non hai theta_monotonic ancora, delta_theta_min torna 0
         self.InterlacedRotationStepNominal = float(self.delta_theta_min())
 
-        def _update_interlaced_metrics(self):
+    def _update_interlaced_metrics(self):
         # Calcola min step e tempi/efficienza
         self._compute_interlaced_min_step()
         self._compute_interlaced_scan_time()
@@ -376,9 +376,24 @@ class InterlacedScan:
         self.rotation_stop_new = rotation_start_new + (self.InterlacedNumAnglesPerRotation - 1) * rotation_step
         self.PSOEndTaxi = self.rotation_stop_new + taxi_dist * user_direction
 
-        self.theta_classic = rotation_start_new + np.arange(
-            self.InterlacedNumAnglesPerRotation, dtype=float
-        ) * rotation_step
+        # Angoli target per PSO: per interlaced devono essere quelli monotoni generati prima
+        if self.theta_monotonic is None:
+    raise ValueError("theta_monotonic non definito: chiama prima un generate_interlaced_*().")
+
+self.theta_target = np.asarray(self.theta_monotonic, dtype=float)
+pulses_per_degree = self.PSOCountsPerRotation / 360.0
+counts = np.round(self.theta_target * pulses_per_degree).astype(np.int64)
+
+# per PSO: monotoni e senza duplicati
+counts = np.unique(np.sort(counts))
+
+self.PSOCountsIdeal = counts
+
+
+
+
+
+
 
     def simulate_taxi_motion(self, omega_target=10, dt=1e-4):
         if self.theta_monotonic is None:
@@ -442,6 +457,9 @@ class InterlacedScan:
         # Counts finali (quelli che userai davvero)
         self.PSOCountsFinal = self.PSOCountsTaxiCorrected.copy()
 
+
+        sep=" "
+
         # Stringa dei pulses corretti angoli taxi-corrected
         self.theta_monotonic_pulses_list = self.PSOCountsFinal.tolist()
         self.theta_monotonic_pulses = sep.join(map(str, self.theta_monotonic_pulses_list))
@@ -494,7 +512,7 @@ class InterlacedScan:
 
         # vincolo camera: periodo frame minimo per singola vista
         #   frame_period = exposure + readout * margin
-        frame_period = float(self.exposure) + float(self.readout) * float(self.readout_margin)
+        frame_period = float(self.self.ExposureTime) + float(self.readout) * float(self.readout_margin)
 
         # se per qualche motivo è <= 0 uso la velocita' impostata dal PV , stima meccanica
         if frame_period <= 0:
