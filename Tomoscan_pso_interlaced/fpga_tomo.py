@@ -97,7 +97,7 @@ class InterlacedScan:
           - InterlacedRotationStop: stop teorico = start + K*360
           - InterlacedRotationStepNominal: delta_theta_min() sugli angoli monotoni (se disponibili)
         """
-        # stop teorico sempre definibile
+        # stop teorico definibile
         self.stop_angle()
 
         # step nominale: se non hai theta_monotonic ancora, delta_theta_min torna 0
@@ -418,13 +418,23 @@ class InterlacedScan:
             np.asarray(self.theta_real, dtype=float) * pulses_per_degree
         ).astype(int)
         self.PSOCountsFinal = self.PSOCountsTaxiCorrected.copy()
+        # Counts finali (quelli che userai davvero)
+    self.PSOCountsFinal = self.PSOCountsTaxiCorrected.copy()
+
+    
+    # Stringa dei pulses corretti angoli  taxi-corrected
+    self.theta_monotonic_pulses_list = self.PSOCountsFinal.tolist()
+    self.theta_monotonic_pulses = sep.join(map(str, self.theta_monotonic_pulses_list))
+
+    return self.theta_monotonic_pulses
 
     # =========================================================
     # FUNZIONI ADDIZIONALI (metriche)
     # =========================================================
 
+    # indicizzo 
 
-
+    
 
     
     def _compute_interlaced_min_step(self):
@@ -438,7 +448,7 @@ class InterlacedScan:
         self.InterlacedMinStep = float(np.min(d)) if d.size else np.nan
         return self.InterlacedMinStep
 
-    # quanto tempo ci mette la rotazione durante una scansione interlacciata: del tempo della rotazione, non del tempo totale dell’acquisizione
+    # quanto tempo ci mette la rotazione durante una scansione interlacciata: del tempo della rotazione non del tempo totale dell’acquisizione
 
     def _compute_interlaced_scan_time(self):
         total_deg = float(self.InterlacedNumberOfRotation) * 360.0
@@ -455,11 +465,9 @@ class InterlacedScan:
 
     def _compute_interlaced_total_acq_time(self):
     """
-    Stima del tempo totale di acquisizione per fly-scan:
-    - tempo rotazione a velocità effettiva (limitata dalla camera) + accel/decel
-    - la velocità effettiva è min(velocità impostata, velocità massima sostenibile dalla camera)
+     tempo rotazione a velocità effettiva (limitata dalla camera) + accel/decel
+     la velocità effettiva è min(velocità impostata, velocità massima sostenibile dalla camera)
     """
-
     # gradi totali da percorrere K·360°
     total_deg = float(self.InterlacedNumberOfRotation) * 360.0
 
@@ -496,73 +504,66 @@ class InterlacedScan:
         # velocità effettiva
         v_eff = min(v_cmd, v_cam_max)
 
-    # ---- 3) tempo rotazione + accel/decel ----
+    # tempo rotazione + accel/decel
     accel = 2.0 * max(0.0, float(self.RotationAccelTime))
     self.InterlacedTotalAcqTime = float(total_deg / v_eff + accel)
     return self.InterlacedTotalAcqTime
 
 
+      # provo a campionare usando come passo base Δθ_min, quali degli angoli che mi interessano cadono nell'intervallo?
+    # Un angolo è preso solo se è entro una tolleranza su un multiplo di dmin
+    def _compute_interlaced_efficiency(self, tol=None, tol_frac=0.1):
+    """
+    Efficienza = percentuale di angoli che cadono su una intervallo a passo dmin.
+    tol: tolleranza assoluta in gradi  
+    tol_frac: frazione di dmin usata come tolleranza se tol è None
+    """
+    if self.theta_monotonic is None:
+        self.InterlacedEfficiency = None
+        return None
 
+    theta = np.asarray(self.theta_monotonic, dtype=float)
+    if theta.size == 0:
+        self.InterlacedEfficiency = None
+        return None
 
+    theta_rel = theta - float(theta[0])
 
+    dmin = float(self.delta_theta_min())
+    if dmin <= 0:
+        self.InterlacedEfficiency = None
+        return None
 
+    # tolleranza per floating
+    if tol is None:
+        tol = tol_frac * dmin
 
+    # indice del multiplo più vicino
+    m = np.rint(theta_rel / dmin).astype(np.int64)
 
+    # distanza dall'esatto multiplo
+    theta_grid = m * dmin
+    err = np.abs(theta_rel - theta_grid)
 
+    taken_mask = err <= tol
+    taken = int(np.count_nonzero(taken_mask))
+    total = int(theta_rel.size)
+    missed = total - taken
 
+    eff = 100.0 * taken / total if total > 0 else np.nan
+    missed_pct = 100.0 * missed / total if total > 0 else np.nan
 
-
-
-
-
-
-
-    
-
-    def _compute_interlaced_efficiency(self):
-        if self.theta_monotonic is None:
-            self.InterlacedEfficiency = None
-            return None
-
-        theta = np.asarray(self.theta_monotonic, dtype=float)
-        if theta.size == 0:
-            self.InterlacedEfficiency = None
-            return None
-
-        theta_rel = theta - float(theta[0])
-
-        dmin = float(self.delta_theta_min())
-        if dmin <= 0:
-            self.InterlacedEfficiency = None
-            return None
-
-        slots = np.rint(theta_rel / dmin).astype(np.int64)
-
-        total_views = int(theta_rel.size)
-        unique_slots = int(np.unique(slots).size)
-
-        lost_views = total_views - unique_slots
-        eff = 100.0 * unique_slots / total_views if total_views > 0 else np.nan
-        lost_pct = 100.0 * lost_views / total_views if total_views > 0 else np.nan
-
-        self.InterlacedEfficiency = dict(
-            delta_theta_min_deg=float(dmin),
-            total_views=int(total_views),
-            unique_slots=int(unique_slots),
-            lost_views=int(lost_views),
-            efficiency_percent=float(eff),
-            lost_percent=float(lost_pct),
-        )
-        return self.InterlacedEfficiency
-
-    def _update_interlaced_metrics(self):
-        self._update_derived_pvs()
-        self._compute_interlaced_min_step()
-        self._compute_interlaced_scan_time()
-        if self.MinStepTarget > 0:
-            self._compute_interlaced_efficiency()
-        else:
-            self.InterlacedEfficiency = None
+    self.InterlacedEfficiency = dict(
+        delta_theta_min_deg=float(dmin),
+        tol_deg=float(tol),
+        total_views=total,
+        taken_views=taken,          # QUELLE CHE "CADONO" SU multipli di dmin
+        missed_views=missed,        # QUELLE OFF-GRID => "non prese"
+        efficiency_percent=float(eff),
+        missed_percent=float(missed_pct),
+        max_abs_error_deg=float(np.max(err)) if err.size else np.nan,
+    )
+    return self.InterlacedEfficiency
 
 
 # ============================================================================
