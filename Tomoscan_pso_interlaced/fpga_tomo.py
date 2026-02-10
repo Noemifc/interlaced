@@ -91,6 +91,7 @@ class InterlacedScan:
     # ----------------------------------------------------------------------
     # Derived PVs (r/w)
     # ----------------------------------------------------------------------
+    
     def _update_derived_pvs(self):
         """
         Aggiorna i PV derivati:
@@ -102,6 +103,16 @@ class InterlacedScan:
 
         # step nominale: se non hai theta_monotonic ancora, delta_theta_min torna 0
         self.InterlacedRotationStepNominal = float(self.delta_theta_min())
+
+        def _update_interlaced_metrics(self):
+        # Calcola min step e tempi/efficienza
+        self._compute_interlaced_min_step()
+        self._compute_interlaced_scan_time()
+
+           # per tempo tempo totale e l'efficienza
+        self._compute_interlaced_total_acq_time()
+        self._compute_interlaced_efficiency()
+
 
     def stop_angle(self, metodo=""):
         """
