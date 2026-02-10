@@ -1,3 +1,4 @@
+```python
 #!/usr/bin/env python3
 import numpy as np
 import math
@@ -20,11 +21,11 @@ class InterlacedScan:
         PSOPulsePerRotation=358818,           # quanti tick vede il contatore trigger *360
         RotationDirection=0,
         RotationAccelTime=0.15,
-        ExposureTime=0.01,                   # r/w
+        ExposureTime=0.01,                    # r/w
         readout=0.01,
         readout_margin=1,
-        SpeedDegPerSec=60.0,                 # r/w
-        MinStepTarget=0.0,                   # r/w
+        SpeedDegPerSec=60.0,                  # r/w
+        MinStepTarget=0.0,                    # r/w
     ):
         # ----------------------------
         # PV-like (r/w)
@@ -91,7 +92,6 @@ class InterlacedScan:
     # ----------------------------------------------------------------------
     # Derived PVs (r/w)
     # ----------------------------------------------------------------------
-    
     def _update_derived_pvs(self):
         """
         Aggiorna i PV derivati:
@@ -109,10 +109,9 @@ class InterlacedScan:
         self._compute_interlaced_min_step()
         self._compute_interlaced_scan_time()
 
-           # per tempo tempo totale e l'efficienza
+        # per tempo tempo totale e l'efficienza
         self._compute_interlaced_total_acq_time()
         self._compute_interlaced_efficiency()
-
 
     def stop_angle(self, metodo=""):
         """
@@ -378,22 +377,16 @@ class InterlacedScan:
 
         # Angoli target per PSO: per interlaced devono essere quelli monotoni generati prima
         if self.theta_monotonic is None:
-    raise ValueError("theta_monotonic non definito: chiama prima un generate_interlaced_*().")
+            raise ValueError("theta_monotonic non definito: chiama prima un generate_interlaced_*().")
 
-self.theta_target = np.asarray(self.theta_monotonic, dtype=float)
-pulses_per_degree = self.PSOCountsPerRotation / 360.0
-counts = np.round(self.theta_target * pulses_per_degree).astype(np.int64)
+        self.theta_target = np.asarray(self.theta_monotonic, dtype=float)
+        pulses_per_degree = self.PSOCountsPerRotation / 360.0
+        counts = np.round(self.theta_target * pulses_per_degree).astype(np.int64)
 
-# per PSO: monotoni e senza duplicati
-counts = np.unique(np.sort(counts))
+        # per PSO: monotoni e senza duplicati
+        counts = np.unique(np.sort(counts))
 
-self.PSOCountsIdeal = counts
-
-
-
-
-
-
+        self.PSOCountsIdeal = counts
 
     def simulate_taxi_motion(self, omega_target=10, dt=1e-4):
         if self.theta_monotonic is None:
@@ -457,8 +450,7 @@ self.PSOCountsIdeal = counts
         # Counts finali (quelli che userai davvero)
         self.PSOCountsFinal = self.PSOCountsTaxiCorrected.copy()
 
-
-        sep=" "
+        sep = " "
 
         # Stringa dei pulses corretti angoli taxi-corrected
         self.theta_monotonic_pulses_list = self.PSOCountsFinal.tolist()
@@ -697,3 +689,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+```
