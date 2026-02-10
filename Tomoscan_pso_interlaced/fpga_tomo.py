@@ -504,7 +504,7 @@ class InterlacedScan:
 
         # vincolo camera: periodo frame minimo per singola vista
         #   frame_period = exposure + readout * margin
-        frame_period = float(self.self.ExposureTime) + float(self.readout) * float(self.readout_margin)
+        frame_period = float(self.ExposureTime) + float(self.readout) * float(self.readout_margin)
 
         # se per qualche motivo è <= 0 uso la velocita' impostata dal PV , stima meccanica
         if frame_period <= 0:
