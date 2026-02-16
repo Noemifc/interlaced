@@ -538,74 +538,71 @@ class InterlacedScan:
     # Try to sample using Δθ_min as the base step: which target angles fall on that grid?
     # An angle is taken only if it is within a tolerance of a dmin multiple
     def _compute_interlaced_efficiency(self, dtheta1, dtheta2, dtheta3, tol=None, tol_frac=0.1):
-        """
-        Compute efficiency for three given grid steps dtheta1<dtheta2<dtheta3.
+    """
+    Compute efficiency for three given grid steps dtheta1<dtheta2<dtheta3 
+    tolerance x min
+    Efficiency(d) = % of angles theta that land within tolerance on a grid of step d,
+    i.e. near multiples of d relative to theta[0].
+    tol: absolute tolerance in degrees (if not None, overrides per-d tolerance)
+    tol_frac: fraction of d used as tolerance when tol is None
+    """
+    if self.theta_monotonic is None:
+        self.InterlacedEfficiency = None
+        return None
 
-        Efficiency(d) = % of angles theta that land within tolerance on a grid of step d,
-        i.e. near multiples of d relative to theta[0].
+    theta = np.asarray(self.theta_monotonic, dtype=float)
+    if theta.size == 0:
+        self.InterlacedEfficiency = None
+        return None
 
-        tol: absolute tolerance in degrees
-        tol_frac: fraction of d used as tolerance if tol is None
-        """
-        if self.theta_monotonic is None:
-            self.InterlacedEfficiency = None
+    theta_rel = theta - float(theta[0])       # relative to first view
+    total = int(theta_rel.size)
+
+    def _eff_for_d(d):                       # eff for single thetamin
+        if d is None:
+            return None
+        d = float(d)
+        if d <= 0:
             return None
 
-        # views in array
-        theta = np.asarray(self.theta_monotonic, dtype=float)
-        if theta.size == 0:
-            self.InterlacedEfficiency = None
-            return None
+        # tolerance tied to this specific d (theta-min step)
+        tol_d = float(tol) if tol is not None else float(tol_frac * d)
 
-        # theta_rel first view
-        theta_rel = theta - float(theta[0])
-        total = int(theta_rel.size)
+        m = np.rint(theta_rel / d).astype(np.int64)
+        theta_grid = m * d
+        err = np.abs(theta_rel - theta_grid)
 
-        # single efficiency x dtheta_n
-        def _eff_for_d(d):
-            if d is None:
-                return None
-            d = float(d)
-            if d <= 0:
-                return None
+        taken_mask = err <= tol_d
+        taken = int(np.count_nonzero(taken_mask))
+        missed = total - taken
 
-            tol_d = float(tol) if tol is not None else float(tol_frac * d)
+        eff = 100.0 * taken / total if total > 0 else np.nan
+        missed_pct = 100.0 * missed / total if total > 0 else np.nan
 
-            m = np.rint(theta_rel / d).astype(np.int64)
-            theta_grid = m * d
-            err = np.abs(theta_rel - theta_grid)
-
-            taken_mask = err <= tol_d
-            taken = int(np.count_nonzero(taken_mask))
-            missed = total - taken
-
-            eff = 100.0 * taken / total if total > 0 else np.nan
-            missed_pct = 100.0 * missed / total if total > 0 else np.nan
-
-            return dict(
-                delta_theta_deg=d,
-                tol_deg=tol_d,
-                total_views=total,
-                taken_views=taken,
-                missed_views=missed,
-                efficiency_percent=float(eff),
-                missed_percent=float(missed_pct),
-                max_abs_error_deg=float(np.max(err)) if err.size else np.nan,
-            )
-
-        r1 = _eff_for_d(dtheta1)
-        r2 = _eff_for_d(dtheta2)
-        r3 = _eff_for_d(dtheta3)
-
-        self.InterlacedEfficiency = dict(
-            dtheta1=r1,
-            dtheta2=r2,
-            dtheta3=r3,
-            efficiency1=(None if r1 is None else r1["efficiency_percent"]),
-            efficiency2=(None if r2 is None else r2["efficiency_percent"]),
-            efficiency3=(None if r3 is None else r3["efficiency_percent"]),
+        return dict(
+            delta_theta_deg=d,
+            tol_deg=tol_d,
+            total_views=total,
+            taken_views=taken,
+            missed_views=missed,
+            efficiency_percent=float(eff),
+            missed_percent=float(missed_pct),
+            max_abs_error_deg=float(np.max(err)) if err.size else np.nan,
         )
-        return self.InterlacedEfficiency
+
+    r1 = _eff_for_d(dtheta1)
+    r2 = _eff_for_d(dtheta2)
+    r3 = _eff_for_d(dtheta3)
+
+    self.InterlacedEfficiency = dict(
+        dtheta1=r1,
+        dtheta2=r2,
+        dtheta3=r3,
+        efficiency1=(None if r1 is None else r1["efficiency_percent"]),
+        efficiency2=(None if r2 is None else r2["efficiency_percent"]),
+        efficiency3=(None if r3 is None else r3["efficiency_percent"]),
+    )
+    return self.InterlacedEfficiency
 
         # generate trigger indices in the encoder pulse train
 
