@@ -115,6 +115,7 @@ class InterlacedScan:
     def stop_angle(self, metodo=""):
         """
         stop_theta = start_angle + number_of_rotations * 360
+         dtheta 1 <  dtheta 2 < dtheta 3
         """
         start_angle = float(self.InterlacedRotationStart)
         numero_di_rotazioni = int(self.InterlacedNumberOfRotation)
@@ -123,20 +124,28 @@ class InterlacedScan:
         return self.InterlacedRotationStop
 
     def delta_theta_min(self, metodo=""):
-        if self.theta_monotonic is None:
-            return 0.0
-
         theta = np.asarray(self.theta_monotonic, dtype=float)
-        if theta.size < 2:
-            return 0.0
+    if theta.size < 2:
+        return {"dtheta1": None, "dtheta2": None, "dtheta3": None}
 
-        dtheta = np.diff(theta)
-        dtheta = dtheta[dtheta > 0]
+    dtheta = np.diff(theta)
+    dtheta = dtheta[dtheta > 0]
+    if dtheta.size == 0:
+        return {"dtheta1": None, "dtheta2": None, "dtheta3": None}
 
-        if dtheta.size == 0:
-            return 0.0
+    duniq = np.unique(dtheta)
+    duniq.sort()
 
-        return float(np.min(dtheta))
+    dtheta1 = float(duniq[0]) if duniq.size >= 1 else None
+    dtheta2 = float(duniq[1]) if duniq.size >= 2 else None
+    dtheta3 = float(duniq[2]) if duniq.size >= 3 else None
+
+    return {"dtheta1": dtheta1, "dtheta2": dtheta2, "dtheta3": dtheta3}
+
+
+
+
+    
 
     # ----------------------------------------------------------------------
     # utility
