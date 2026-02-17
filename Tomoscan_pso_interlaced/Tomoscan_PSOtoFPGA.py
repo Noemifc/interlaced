@@ -539,8 +539,7 @@ class InterlacedScan:
     # An angle is taken only if it is within a tolerance of a dmin multiple
     def _compute_interlaced_efficiency(self, dtheta1, dtheta2, dtheta3, tol=None, tol_frac=0.1):
     """
-    Compute efficiency for three given grid steps dtheta1<dtheta2<dtheta3 
-    tolerance x min
+    Compute efficiency for three given grid steps dtheta1<dtheta2<dtheta3.
     Efficiency(d) = % of angles theta that land within tolerance on a grid of step d,
     i.e. near multiples of d relative to theta[0].
     tol: absolute tolerance in degrees (if not None, overrides per-d tolerance)
@@ -555,25 +554,23 @@ class InterlacedScan:
         self.InterlacedEfficiency = None
         return None
 
-    theta_rel = theta - float(theta[0])       # relative to first view
+    theta_rel = theta - float(theta[0])
     total = int(theta_rel.size)
 
-    def _eff_for_d(d):                       # eff for single thetamin
+    def _eff_for_d(d):
         if d is None:
             return None
         d = float(d)
         if d <= 0:
             return None
 
-        # tolerance tied to this specific d (theta-min step)
         tol_d = float(tol) if tol is not None else float(tol_frac * d)
 
         m = np.rint(theta_rel / d).astype(np.int64)
         theta_grid = m * d
         err = np.abs(theta_rel - theta_grid)
 
-        taken_mask = err <= tol_d
-        taken = int(np.count_nonzero(taken_mask))
+        taken = int(np.count_nonzero(err <= tol_d))
         missed = total - taken
 
         eff = 100.0 * taken / total if total > 0 else np.nan
@@ -604,7 +601,6 @@ class InterlacedScan:
     )
     return self.InterlacedEfficiency
 
-        # generate trigger indices in the encoder pulse train
 
     def theta_monotonic_pulses_to_trigger_positions(self, n_rotations, pulses_per_rotation, sep=" "):
         """
