@@ -382,3 +382,9 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+
+
+
+# python3 dose_calc.py --K 4 --N 32 --exposure 0.01 --frame-time-mode exposure
