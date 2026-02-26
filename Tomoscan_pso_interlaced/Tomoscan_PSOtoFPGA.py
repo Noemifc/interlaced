@@ -1,3 +1,16 @@
+"""
+Interlaced scan utilities for TomoScan   
+
+This module provides an InterlacedScan helper to generate interlaced angle
+sequences (e.g. TIMBIR-like, golden-angle, multi-turn variants), convert angles
+to encoder/PSO counts, and prepare trigger position lists suitable for fast
+trigger delivery hardware.
+
+
+Author: Noemi Fico
+"""
+
+
 #!/usr/bin/env python3
 import numpy as np
 import math
