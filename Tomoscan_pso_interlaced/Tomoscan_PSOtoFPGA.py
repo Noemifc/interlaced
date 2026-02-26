@@ -1,4 +1,3 @@
-```python
 #!/usr/bin/env python3
 import numpy as np
 import math
@@ -101,8 +100,9 @@ class InterlacedScan:
         # theoretical stop can be defined
         self.stop_angle()
 
-        # nominal step: if theta_monotonic is not set yet, delta_theta_min returns 0
-        self.InterlacedRotationStepNominal = float(self.delta_theta_min())
+        # nominal step: if theta_monotonic is not set yet, delta_theta_min returns dict
+        d = self.delta_theta_min()
+        self.InterlacedRotationStepNominal = float(d["dtheta1"]) if d["dtheta1"] is not None else None
 
     def _update_interlaced_metrics(self):
         # Computes min step and times/efficiency
@@ -125,7 +125,7 @@ class InterlacedScan:
         return self.InterlacedRotationStop
 
     def delta_theta_min(self, metodo=""):
-        theta = np.asarray(self.theta_monotonic, dtype=float)
+        theta = np.asarray(self.theta_monotonic, dtype=float) if self.theta_monotonic is not None else np.asarray([])
         if theta.size < 2:
             return {"dtheta1": None, "dtheta2": None, "dtheta3": None}
 
@@ -347,15 +347,10 @@ class InterlacedScan:
         overall_sense, user_direction = self.compute_senses()
         encoder_multiply = self.PSOCountsPerRotation / 360.0
 
-        rotation_step = (
-            float(self.InterlacedRotationStepNominal)
-            if self.InterlacedRotationStepNominal is not None
-            else 0.0
-        )
+        rotation_step = float(self.InterlacedRotationStepNominal) if self.InterlacedRotationStepNominal is not None else 0.0
         raw_counts = rotation_step * encoder_multiply
         delta_counts = round(raw_counts) if encoder_multiply != 0 else 0
         rotation_step = (delta_counts / encoder_multiply) if encoder_multiply != 0 else rotation_step
-
         self.InterlacedRotationStepNominal = rotation_step
 
         dt = self.compute_frame_time()
@@ -368,11 +363,7 @@ class InterlacedScan:
         else:
             rotation_start_new = float(self.InterlacedRotationStart) - (2 - self.readout_margin) * rotation_step
 
-        taxi_steps = (
-            math.ceil((accel_dist / abs(rotation_step)) + 0.5)
-            if abs(rotation_step) > 0
-            else 0
-        )
+        taxi_steps = math.ceil((accel_dist / abs(rotation_step)) + 0.5) if abs(rotation_step) > 0 else 0
         taxi_dist = taxi_steps * abs(rotation_step)
 
         self.PSOStartTaxi = rotation_start_new - taxi_dist * user_direction
@@ -404,7 +395,7 @@ class InterlacedScan:
         accel = decel = float(omega_target) / float(self.RotationAccelTime)
 
         t_acc = np.arange(0, self.RotationAccelTime, dt)
-        theta_acc = 0.5 * accel * t_acc ** 2
+        theta_acc = 0.5 * accel * t_acc**2
         theta_acc_end = float(theta_acc[-1]) if len(theta_acc) > 0 else 0.0
 
         theta_flat_len = theta_max - 2 * theta_acc_end
@@ -416,7 +407,7 @@ class InterlacedScan:
 
         t_dec = np.arange(0, self.RotationAccelTime, dt)
         last_flat = float(theta_flat[-1]) if len(theta_flat) > 0 else theta_acc_end
-        theta_dec = last_flat + omega_target * t_dec - 0.5 * decel * t_dec ** 2
+        theta_dec = last_flat + omega_target * t_dec - 0.5 * decel * t_dec**2
 
         self.theta_vec = np.concatenate([theta_acc, theta_flat, theta_dec]).astype(float)
         self.t_vec = np.concatenate([
@@ -447,9 +438,7 @@ class InterlacedScan:
         if self.theta_real is None:
             raise ValueError("theta_real not defined: call compute_real_motion() first.")
 
-        self.PSOCountsTaxiCorrected = np.round(
-            np.asarray(self.theta_real, dtype=float) * pulses_per_degree
-        ).astype(int)
+        self.PSOCountsTaxiCorrected = np.round(np.asarray(self.theta_real, dtype=float) * pulses_per_degree).astype(int)
 
         # Final counts (the ones you will actually use)
         self.PSOCountsFinal = self.PSOCountsTaxiCorrected.copy()
@@ -490,32 +479,25 @@ class InterlacedScan:
         return self.InterlacedScanTime
 
     # Estimate of total acquisition time in fly-scan:
-    # time needed to rotate the full required angle
     def _compute_interlaced_total_acq_time(self):
         """
         Rotation time at effective speed (camera-limited) + accel/decel
         Effective speed is min(commanded speed, max camera-sustainable speed)
         """
-        # total degrees to travel: K·360°
         total_deg = float(self.InterlacedNumberOfRotation) * 360.0
 
-        # commanded speed from PV
         v_cmd = float(self.SpeedDegPerSec)
         if v_cmd <= 0 or total_deg <= 0:
             self.InterlacedTotalAcqTime = np.nan
             return self.InterlacedTotalAcqTime
 
-        # camera constraint: minimum frame period per view
         frame_period = float(self.ExposureTime) + float(self.readout) * float(self.readout_margin)
 
-        # if for some reason it's <= 0, use the commanded speed (mechanical estimate)
         if frame_period <= 0:
             v_eff = v_cmd
         else:
-            # angular step required per frame: how many degrees per frame
-            step = float(getattr(self, "InterlacedMinStep", np.nan))  # degrees between consecutive views
+            step = float(getattr(self, "InterlacedMinStep", np.nan))
             if not np.isfinite(step) or step <= 0:
-                # reasonable fallback: nominal step (360/N) per rotation
                 N = float(self.InterlacedNumAnglesPerRotation)
                 step = 360.0 / N if N > 0 else np.nan
 
@@ -523,96 +505,89 @@ class InterlacedScan:
                 self.InterlacedTotalAcqTime = np.nan
                 return self.InterlacedTotalAcqTime
 
-            # max speed the camera can sustain without dropping frames
             v_cam_max = step / frame_period
-
-            # effective speed
             v_eff = min(v_cmd, v_cam_max)
 
-        # rotation time + accel/decel
         accel = 2.0 * max(0.0, float(self.RotationAccelTime))
         self.InterlacedTotalAcqTime = float(total_deg / v_eff + accel)
         return self.InterlacedTotalAcqTime
 
-    # Try to sample using Δθ_min as the base step: which target angles fall on that grid?
-    # An angle is taken only if it is within a tolerance of a dmin multiple
     def _compute_interlaced_efficiency(self, dtheta1=None, dtheta2=None, dtheta3=None, tol=None, tol_frac=0.1):
-    """
-    Compute efficiency for three given grid steps dtheta1<dtheta2<dtheta3.
+        """
+        Compute efficiency for three given grid steps dtheta1<dtheta2<dtheta3.
 
-    Efficiency(d) = % of angles theta that land within tolerance on a grid of step d,
-    i.e. near multiples of d relative to theta[0].
+        Efficiency(d) = % of angles theta that land within tolerance on a grid of step d,
+        i.e. near multiples of d relative to theta[0].
 
-    If dtheta1/2/3 are None, they are auto-filled from self.delta_theta_min().
-    tol: absolute tolerance in degrees (if not None, overrides per-d tolerance)
-    tol_frac: fraction of d used as tolerance when tol is None
-    """
-    if self.theta_monotonic is None:
-        self.InterlacedEfficiency = None
-        return None
-
-    theta = np.asarray(self.theta_monotonic, dtype=float)
-    if theta.size == 0:
-        self.InterlacedEfficiency = None
-        return None
-
-    # --- auto-get dthetas if not provided (compat with your existing delta_theta_min())
-    if dtheta1 is None or dtheta2 is None or dtheta3 is None:
-        d = self.delta_theta_min()  # dict: {"dtheta1":..., "dtheta2":..., "dtheta3":...}
-        if dtheta1 is None:
-            dtheta1 = d.get("dtheta1", None)
-        if dtheta2 is None:
-            dtheta2 = d.get("dtheta2", None)
-        if dtheta3 is None:
-            dtheta3 = d.get("dtheta3", None)
-
-    theta_rel = theta - float(theta[0])
-    total = int(theta_rel.size)
-
-    def _eff_for_d(d):
-        if d is None:
-            return None
-        d = float(d)
-        if d <= 0:
+        If dtheta1/2/3 are None, they are auto-filled from self.delta_theta_min().
+        tol: absolute tolerance in degrees (if not None, overrides per-d tolerance)
+        tol_frac: fraction of d used as tolerance when tol is None
+        """
+        if self.theta_monotonic is None:
+            self.InterlacedEfficiency = None
             return None
 
-        tol_d = float(tol) if tol is not None else float(tol_frac * d)
+        theta = np.asarray(self.theta_monotonic, dtype=float)
+        if theta.size == 0:
+            self.InterlacedEfficiency = None
+            return None
 
-        # nearest grid multiple
-        m = np.rint(theta_rel / d).astype(np.int64)
-        theta_grid = m * d
-        err = np.abs(theta_rel - theta_grid)
+        # auto-get dthetas if not provided
+        if dtheta1 is None or dtheta2 is None or dtheta3 is None:
+            d = self.delta_theta_min()
+            if dtheta1 is None:
+                dtheta1 = d.get("dtheta1", None)
+            if dtheta2 is None:
+                dtheta2 = d.get("dtheta2", None)
+            if dtheta3 is None:
+                dtheta3 = d.get("dtheta3", None)
 
-        taken = int(np.count_nonzero(err <= tol_d))
-        missed = total - taken
+        theta_rel = theta - float(theta[0])
+        total = int(theta_rel.size)
 
-        eff = 100.0 * taken / total if total > 0 else np.nan
-        missed_pct = 100.0 * missed / total if total > 0 else np.nan
+        def _eff_for_d(d):
+            if d is None:
+                return None
+            d = float(d)
+            if d <= 0:
+                return None
 
-        return dict(
-            delta_theta_deg=d,
-            tol_deg=tol_d,
-            total_views=total,
-            taken_views=taken,
-            missed_views=missed,
-            efficiency_percent=float(eff),
-            missed_percent=float(missed_pct),
-            max_abs_error_deg=float(np.max(err)) if err.size else np.nan,
+            tol_d = float(tol) if tol is not None else float(tol_frac * d)
+
+            m = np.rint(theta_rel / d).astype(np.int64)
+            theta_grid = m * d
+            err = np.abs(theta_rel - theta_grid)
+
+            taken = int(np.count_nonzero(err <= tol_d))
+            missed = total - taken
+
+            eff = 100.0 * taken / total if total > 0 else np.nan
+            missed_pct = 100.0 * missed / total if total > 0 else np.nan
+
+            return dict(
+                delta_theta_deg=d,
+                tol_deg=tol_d,
+                total_views=total,
+                taken_views=taken,
+                missed_views=missed,
+                efficiency_percent=float(eff),
+                missed_percent=float(missed_pct),
+                max_abs_error_deg=float(np.max(err)) if err.size else np.nan,
+            )
+
+        r1 = _eff_for_d(dtheta1)
+        r2 = _eff_for_d(dtheta2)
+        r3 = _eff_for_d(dtheta3)
+
+        self.InterlacedEfficiency = dict(
+            dtheta1=r1,
+            dtheta2=r2,
+            dtheta3=r3,
+            efficiency1=(None if r1 is None else r1["efficiency_percent"]),
+            efficiency2=(None if r2 is None else r2["efficiency_percent"]),
+            efficiency3=(None if r3 is None else r3["efficiency_percent"]),
         )
-
-    r1 = _eff_for_d(dtheta1)
-    r2 = _eff_for_d(dtheta2)
-    r3 = _eff_for_d(dtheta3)
-
-    self.InterlacedEfficiency = dict(
-        dtheta1=r1,
-        dtheta2=r2,
-        dtheta3=r3,
-        efficiency1=(None if r1 is None else r1["efficiency_percent"]),
-        efficiency2=(None if r2 is None else r2["efficiency_percent"]),
-        efficiency3=(None if r3 is None else r3["efficiency_percent"]),
-    )
-    return self.InterlacedEfficiency
+        return self.InterlacedEfficiency
 
     def theta_monotonic_pulses_to_trigger_positions(self, n_rotations, pulses_per_rotation, sep=" "):
         """
@@ -626,7 +601,7 @@ class InterlacedScan:
         if P <= 0 or N <= 0:
             raise ValueError("pulses_per_rotation and n_rotations must be > 0")
 
-        max_idx = N * P - 1     # for N turns with P ticks/turn -> max index N·P−1
+        max_idx = N * P - 1
 
         if not hasattr(self, "theta_monotonic_pulses") or self.theta_monotonic_pulses is None:
             raise ValueError("theta_monotonic_pulses not defined")
@@ -634,10 +609,7 @@ class InterlacedScan:
         s = str(self.theta_monotonic_pulses)
         pulses = np.asarray([int(x) for x in s.split() if x.strip()], dtype=np.int64)
 
-        # absolute counter
         pulses = np.clip(pulses, 0, max_idx)
-
-        # increasing and without duplicates
         positions = np.unique(np.sort(pulses)).astype(np.int64)
 
         self.trigger_positions = positions.tolist()
@@ -713,21 +685,10 @@ def main():
         pulses_per_rotation=scan.PSOPulsePerRotation
     )
 
-    print(
-        "trigger_positions (first 10):",
-        scan.trigger_positions[:10] if hasattr(scan, "trigger_positions") else None
-    )
-
-    print(
-        "PSOCountsIdeal (first 10):",
-        scan.PSOCountsIdeal[:10] if scan.PSOCountsIdeal is not None else None
-    )
-    print(
-        "PSOCountsFinal (first 10):",
-        scan.PSOCountsFinal[:10] if scan.PSOCountsFinal is not None else None
-    )
+    print("trigger_positions (first 10):", scan.trigger_positions[:10] if hasattr(scan, "trigger_positions") else None)
+    print("PSOCountsIdeal (first 10):", scan.PSOCountsIdeal[:10] if scan.PSOCountsIdeal is not None else None)
+    print("PSOCountsFinal (first 10):", scan.PSOCountsFinal[:10] if scan.PSOCountsFinal is not None else None)
 
 
 if __name__ == "__main__":
     main()
-```
